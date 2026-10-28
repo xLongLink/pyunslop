@@ -53,9 +53,9 @@ EXPRESSION_FUNCTIONS = {
 STATEMENT_METHODS = {"where", "filter", "having", "order_by", "group_by", "limit", "offset", "join"}
 
 
-def check_patterns(tree: ast.AST) -> list[ASTFinding]:
+def check_patterns(tree: ast.AST, source: str = "") -> list[ASTFinding]:
     """Run registered AST rules through one shared scope-aware traversal."""
-    visitor = AnalysisVisitor()
+    visitor = AnalysisVisitor(source)
     visitor.visit(tree)
     return visitor.findings
 
@@ -69,9 +69,10 @@ class AnalysisVisitor(ast.NodeVisitor):
     EXECUTE_RESULTS = EXECUTE_RESULTS
     EXPRESSION_FUNCTIONS = EXPRESSION_FUNCTIONS
 
-    def __init__(self) -> None:
+    def __init__(self, source: str = "") -> None:
         """Start an independent analysis without retaining state between files."""
         self.cli_doc_used = False
+        self.source_lines = source.splitlines()
         self.names: dict[str, str] = {}
         self.contracts: dict[str, str] = {}
         self.parents: list[ast.AST] = []

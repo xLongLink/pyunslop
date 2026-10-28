@@ -59,6 +59,8 @@ example.py:12:1: warning: CM001 more than 10 code lines without a standalone com
 | PY013 | Do not import retired `src.errors` wrappers. |
 | PY014 | Reject leading module docstrings (CLI help exempt). |
 | PY015 | Replace single literal-case pytest parametrization when it adds no fixture/collection behavior. |
+| PY016 | Use pytest instead of unittest. |
+| PY017 | Order Pydantic model fields from shortest name to longest within each section. |
 | PY101 | Review response-model reconstruction when the route already declares that model. |
 | PY106 | Use an explicit loop for dependent walrus bindings in comprehension constructor arguments. |
 | PY107 | Review single-use list materialization for known iterable-only consumers. |
@@ -283,7 +285,24 @@ adopted by this tool, not claims about general Python best practices.
   `__doc__` is used explicitly for help in a recognized argparse, Click, or
   Typer constructor/decorator (`description`, `epilog`, or `help`).
 
-## Parametrization and review rules
+## Test framework and parametrization rules
+
+**PY016** flags absolute `unittest` imports, including aliases, `from` imports,
+and submodules such as `unittest.mock`. Use pytest-style tests, plain assertions,
+fixtures, and `pytest.raises` instead. For mocking, consider pytest's `monkeypatch`
+fixture or the pytest-mock plugin. Relative and dynamic imports are not resolved.
+This is a fixed policy, not an automatic migration: existing tests are never rewritten.
+
+**PY017** checks annotated fields in classes directly inheriting from imported
+Pydantic `BaseModel` (including aliases and module-qualified imports). Within
+each blank-line-separated section, field names should run from shortest to
+longest; equal-length names have no required order. Non-field statements,
+private attributes, `model_config`, and recognized `ClassVar` annotations also
+separate field runs. Indirect or imported custom model bases are not inferred.
+This is a repository style policy, not a general Python requirement. Findings
+are warnings only: review validation dependencies, default factories, and any
+intentional serialization order before manually reordering. No fields are
+automatically moved.
 
 **PY015** flags exactly one literal case in a known `pytest.mark.parametrize`
 decorator. Dynamic cases, `pytest.param(...)`, explicit IDs or scopes, indirect

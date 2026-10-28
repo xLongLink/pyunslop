@@ -90,5 +90,5 @@ def check_file(path: Path) -> list[Warning]:
 
     # Every rule owns its findings; parsing and warning presentation stay shared.
     warnings = [Warning(path, line, column, code, message) for check in COMMENT_RULES for line, column, code, message in check(facts)]
-    warnings.extend(Warning(path, node.lineno, node.col_offset + 1, code, message) for node, code, message in check_patterns(tree))
+    warnings.extend(Warning(path, node.lineno, node.col_offset + 1, code, message) for node, code, message in check_patterns(tree, source))
     return sorted(warnings, key=lambda warning: (warning.line, warning.column, warning.code))
