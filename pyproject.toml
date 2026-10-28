@@ -7,6 +7,7 @@ name = "pyunslop"
 version = "0.0.0"
 description = "Warning-only Python code checks for humans and coding agents"
 readme = "README.md"
+license = { file = "LICENSE" }
 requires-python = ">=3.10"
 dependencies = []
 keywords = ["lint", "comments", "agents", "python"]

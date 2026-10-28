@@ -1,6 +1,18 @@
-# pyunslop
+<div align="center">
 
-A Python code checker for humans and coding agents. Requires Python 3.10 or newer.
+<img src="banner.png" alt="pyunslop banner" />
+
+<h3>Keep Python code clear, for humans and coding agents</h3>
+
+Find unnecessary complexity and enforce focused code conventions. <br />
+pyunslop reports warnings without modifying your code or failing your build. Requires Python 3.10 or newer.
+
+[![Tests](https://github.com/xLongLink/pyunslop/actions/workflows/tests.yml/badge.svg)](https://github.com/xLongLink/pyunslop/actions/workflows/tests.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+[![Python versions](https://img.shields.io/pypi/pyversions/pyunslop)](https://pypi.org/project/pyunslop/)
+[![PyPI version](https://img.shields.io/pypi/v/pyunslop)](https://pypi.org/project/pyunslop/)
+
+</div>
 
 ```
 uvx pyunslop
@@ -73,3 +85,16 @@ split-on-trailing-comma = false
 [tool.ruff.lint.pep8-naming]
 extend-ignore-names = ["visit_*"]
 ```
+
+<br />
+
+---
+
+<div align="center">
+LongLink 2026
+
+[License](./LICENSE) &nbsp; - &nbsp; [Contributing](./CONTRIBUTING.md) &nbsp; - &nbsp; [Code of Conduct](./CODE_OF_CONDUCT.md) &nbsp; - &nbsp; [Contact](mailto:info@longlink.dev)
+
+</div>
+
+---
