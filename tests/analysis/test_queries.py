@@ -227,6 +227,23 @@ def test_immediate_refresh_candidate() -> None:
     assert codes(source) == ["SLOP022"]
 
 
+@pytest.mark.parametrize(
+    "block",
+    [
+        "if ready:\n{body}",
+        "if ready:\n    pass\nelse:\n{body}",
+        "try:\n    pass\nexcept Error:\n{body}",
+        "try:\n    pass\nfinally:\n{body}",
+    ],
+)
+def test_immediate_refresh_in_compound_blocks(block: str) -> None:
+    """Recognize adjacent commits and refreshes in every statement-list field."""
+    body = "    await s.commit()\n    await s.refresh(item)"
+    source = "from sqlalchemy.ext.asyncio import AsyncSession\nasync def save(s: AsyncSession, item):\n"
+    source += "\n".join("    " + line for line in block.format(body=body).splitlines())
+    assert codes(source) == ["SLOP022"]
+
+
 def test_different_sessions_and_intervening_work_are_preserved() -> None:
     """Keep refreshes on other sessions or separated from commit by work."""
     source = """

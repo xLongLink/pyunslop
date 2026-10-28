@@ -80,14 +80,14 @@ def single_use_constants(scope: ScopeNode) -> list[Finding]:
         return []
 
     # Nested scopes can capture or shadow an otherwise single use.
-    nested: list[ast.AST] = []
+    nested: set[ast.AST] = set()
     pending = list(ast.iter_child_nodes(scope))
     while pending:
         node = pending.pop()
 
         # A boundary's walk includes deeper scopes; do not expand them separately.
         if isinstance(node, SCOPE_BOUNDARIES):
-            nested.extend(ast.walk(node))
+            nested.update(ast.walk(node))
         else:
             pending.extend(ast.iter_child_nodes(node))
 
@@ -100,7 +100,7 @@ def single_use_constants(scope: ScopeNode) -> list[Finding]:
 
         # Only one store followed by one same-scope load is eligible.
         references = [node for node in nodes if mentions_binding(node, target.id)]
-        if len(references) != 2 or any(mentions_binding(node, target.id) for node in nested):
+        if len(references) != 2 or any(reference in nested for reference in references):
             continue
         uses = [node for node in references if isinstance(node, ast.Name) and isinstance(node.ctx, ast.Load)]
 

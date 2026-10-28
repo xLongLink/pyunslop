@@ -1,6 +1,39 @@
 import ast
+import pytest
 import textwrap
-from pyunslop.ast_utils import name_loads, scope_nodes
+from pyunslop.ast_utils import name_loads, scope_nodes, statement_positions
+
+
+@pytest.mark.parametrize(
+    "block",
+    [
+        "if ready:\n{body}",
+        "if ready:\n    pass\nelse:\n{body}",
+        "try:\n    pass\nexcept Error:\n{body}",
+        "try:\n    pass\nfinally:\n{body}",
+    ],
+)
+def test_statement_positions_cover_statement_lists(block: str) -> None:
+    """Locate first, middle, and last statements across compound blocks."""
+    tree = ast.parse(block.format(body="    first()\n    middle()\n    last()"))
+    statements = [node for node in ast.walk(tree) if isinstance(node, ast.Expr)]
+    parent = tree.body[0]
+    if isinstance(parent, ast.Try) and parent.handlers:
+        parent = parent.handlers[0]
+
+    # Assert
+    for index, node in enumerate(statements):
+        assert list(statement_positions(parent, node)) == [(statements, index)]
+
+
+def test_statement_positions_ignore_nodes_outside_list_fields() -> None:
+    """Neither an absent statement nor a scalar AST field is a sibling list."""
+    node = ast.Pass()
+    parent = ast.AST()
+    parent._fields = ("scalar", "body")
+    parent.scalar = node
+    parent.body = [ast.Pass()]
+    assert list(statement_positions(parent, node)) == []
 
 
 def test_name_loads_include_closures_but_not_stores() -> None:

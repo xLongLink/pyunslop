@@ -1,9 +1,9 @@
 import ast
 from pyunslop.analysis import query_types
-from pyunslop.analysis.bindings import BindingVisitor
-from pyunslop.ast_utils import name_loads, scope_nodes
+from pyunslop.ast_utils import name_loads, scope_nodes, statement_positions
 from pyunslop.contracts import LoopNode, FunctionNode
 from pyunslop.diagnostics import Finding
+from pyunslop.analysis.bindings import BindingVisitor
 
 SCALAR_API_MESSAGE = "use session.scalars() instead of execute().scalars(); preserve one()/one_or_none() cardinality checks"
 REFRESH_MESSAGE = "review post-commit refresh: check expire_on_commit, server defaults, and required relationships before removing it"
@@ -218,13 +218,8 @@ class QueryAnalyzer(BindingVisitor):
         refresh = called_method(node)
         if refresh and refresh.attr == "refresh" and self.kind(refresh.value) == "@session":
 
-            # Search statement lists, not arbitrary sibling AST fields.
-            for _, statements in ast.iter_fields(self.parents[-2]):
-                if not isinstance(statements, list) or node not in statements:
-                    continue
-
-                # Only an immediately preceding same-session commit establishes this candidate.
-                index = statements.index(node)
+            # Only an immediately preceding same-session commit establishes this candidate.
+            for statements, index in statement_positions(self.parents[-2], node):
                 commit = called_method(statements[index - 1]) if index else None
                 if commit and commit.attr == "commit" and ast.dump(commit.value) == ast.dump(refresh.value):
                     self.findings.append(Finding.at(node, "SLOP022", REFRESH_MESSAGE))

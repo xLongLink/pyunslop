@@ -35,6 +35,23 @@ def test_adjacent_single_use_temporary(consumer: str) -> None:
     assert codes(source) == ["SLOP017"]
 
 
+# Adjacency applies to compound statement lists as well as function bodies.
+@pytest.mark.parametrize(
+    "block",
+    [
+        "if ready:\n{body}",
+        "if ready:\n    pass\nelse:\n{body}",
+        "try:\n    pass\nexcept Error:\n{body}",
+        "try:\n    pass\nfinally:\n{body}",
+    ],
+)
+def test_adjacent_temporary_in_compound_blocks(block: str) -> None:
+    """Keep adjacency checks in conditional, handler, and cleanup bodies."""
+    body = "    amounts = [invoice.amount for invoice in invoices]\n    return sum(amounts)"
+    source = "def total(invoices):\n" + "\n".join("    " + line for line in block.format(body=body).splitlines())
+    assert codes(source) == ["SLOP017"]
+
+
 @pytest.mark.parametrize("body", SNAPSHOT_CONSUMERS)
 def test_reused_or_snapshot_lists_are_preserved(body: str) -> None:
     """Retain reused lists and snapshots separated from their consumer by work."""
