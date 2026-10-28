@@ -69,6 +69,35 @@ example.py:12:1: warning: CM001 more than 10 code lines without a standalone com
 | PY113 | Review immediate post-commit ORM refreshes. |
 | PY114 | Review inlining single-use literal constants. |
 | RFMT001 | Source does not match the fixed Ruff formatter preset. |
+| F | Pyflakes: unused imports, undefined names, and other correctness checks. |
+| UP | pyupgrade: modern Python syntax and APIs. |
+| D | pydocstyle: docstring presence and conventions. |
+| DTZ | flake8-datetimez: timezone-aware datetime usage. |
+| I | isort: import sorting and formatting. |
+| ICN | flake8-import-conventions: conventional import aliases. |
+| PIE | flake8-pie: unnecessary or redundant code. |
+| RET | flake8-return: return-statement consistency and simplification. |
+| ARG | flake8-unused-arguments: unused function and method arguments. |
+| N | pep8-naming: Python naming conventions. |
+| PERF | Perflint: common performance pitfalls. |
+| PTH | flake8-use-pathlib: prefer pathlib APIs. |
+| A | flake8-builtins: names shadowing Python builtins. |
+| S | flake8-bandit: potential security issues. |
+| ASYNC | flake8-async: asynchronous code pitfalls. |
+| ANN | Require argument and return annotations, including avoiding explicit `Any` (ANN401). |
+| B006 | Avoid mutable default argument values. |
+| E302 | Require the expected blank lines before definitions. |
+| E305 | Require the expected blank lines after definitions. |
+| PGH003 | Require specific codes in type-ignore comments. |
+| PT | flake8-pytest-style: pytest conventions and test simplification. |
+| RUF100 | Remove unused `noqa` directives. |
+| S324 | Review insecure hash functions. |
+| S506 | Avoid unsafe YAML loading. |
+
+Ruff entries without a numeric suffix select entire rule families; diagnostics
+use individual codes such as `F401` or `S506`. `S324` and `S506` are explicitly
+selected as well as belonging to `S`. The exclusions and conflict handling below
+still apply; selecting a family does not override them.
 
 ## Ruff lint and formatting
 
@@ -77,18 +106,29 @@ Python 3.12 target, preview lint rules, and formatting with
 `skip-magic-trailing-comma = true`. The exact configuration is in `pyproject.toml`
 and bundled in the installed package's `ruff.toml`.
 
-Ruff diagnostics retain their original rule codes (`F401`, `UP007`, `S506`, etc.)
-and are reported as warnings. The enabled families and individual rules are:
+The enforced lint selection is:
 
-```text
-F UP D DTZ I ICN PIE RET ARG N PERF PTH A S ASYNC ANN401 B006
-E302 E305 PGH003 PT RUF100 S324 S506
+```toml
+[tool.ruff.lint]
+preview = true
+select = ["F", "UP", "D", "DTZ", "I", "ICN", "PIE", "RET", "ARG", "N", "PERF", "PTH", "A", "S", "ASYNC", "ANN", "B006", "E302", "E305", "PGH003", "PT", "RUF100", "S324", "S506"]
+ignore = ["D100", "D104", "D202"]
 ```
+
+Ruff diagnostics retain their original rule codes (`F401`, `UP007`, `S506`, etc.)
+and are reported as warnings. The table above describes each selected family
+and individually selected rule.
 
 `D100`, `D104`, and `D202` are ignored. Files under the scanned project's
 `tests/` directory additionally ignore `ARG`, `N803`, and `S`. Import sorting uses
 `no-sections = true`, `length-sort = true`, and `split-on-trailing-comma = false`.
 Ruff resolves incompatible pydocstyle rules using its standard conflict handling.
+
+The full `ANN` family is enabled, not just `ANN401`: missing parameter types,
+missing return types, and dynamically typed `Any` annotations are reported as
+warnings. These rules check annotations, not general type compatibility; they do
+not replace a static type checker. The library ships a `py.typed` marker for
+downstream type checking.
 
 Both Ruff lint and format checks are read-only and use the same discovered Python
 files as the native checks. Project-local Ruff settings cannot disable or change
@@ -339,9 +379,32 @@ For the same batched Ruff checks used by the CLI, call
 the project root. It returns the same warning objects; Ruff engine failures
 raise `RuntimeError`.
 
+```python
+from pathlib import Path
+from pyunslop import find_python_files
+from pyunslop.ruff_checks import check_ruff
+
+for warning in check_ruff(list(find_python_files([Path(".")]))):
+    print(warning)
+```
+
+Ruff does not expose a supported in-process Python linting API via `import ruff`.
+`check_ruff` invokes the installed Ruff executable in a subprocess and parses its
+JSON diagnostics. The executable is located through installed package metadata,
+so a scanned project's `ruff.py` is never imported or executed. Both lint and
+format checks are read-only; findings are returned as warnings rather than raised.
+
 ## Development
 
 ```sh
 python -m pip install -e .
 python -m unittest discover -s tests -v
 ```
+
+## Rule organization
+
+Each native rule is implemented in its own module under `src/pyunslop/rules/`,
+such as `cm001.py`, `py009.py`, and `py114.py`. The fixed registry in
+`rules/__init__.py` connects rules to shared AST traversal in `analysis.py` and
+lexical facts in `source.py`. `rfmt001.py` owns formatter warning handling;
+Ruff's lint rules remain delegated to the pinned Ruff engine.

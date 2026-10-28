@@ -1,14 +1,12 @@
-import ast
-import io
 import os
+import ast
 import tokenize
-from collections.abc import Iterable, Iterator
-from dataclasses import dataclass
+from .rules import COMMENT_RULES
+from .source import Source
 from pathlib import Path
-
-from .query_rules import check_queries
-
-MAX_CODE_LINES = 10
+from .analysis import check_patterns
+from dataclasses import dataclass
+from collections.abc import Iterable, Iterator
 
 EXCLUDED_DIRS = {
     ".git",
@@ -18,7 +16,6 @@ EXCLUDED_DIRS = {
     ".ruff_cache",
     ".tox",
     ".venv",
-
     # Build outputs and installed dependencies are not project source.
     "__pycache__",
     "build",
@@ -27,21 +24,10 @@ EXCLUDED_DIRS = {
     "venv",
 }
 
-# Layout tokens must not inflate the physical code-line count.
-NON_CODE_TOKENS = {
-    tokenize.COMMENT,
-    tokenize.ENCODING,
-    tokenize.ENDMARKER,
-    tokenize.INDENT,
-    tokenize.DEDENT,
-    tokenize.NEWLINE,
-    tokenize.NL,
-}
-
 
 # Structured findings can be consumed without parsing CLI output.
 @dataclass(frozen=True)
-class Warning:
+class Warning:  # noqa: A001
     """A source location and an actionable warning."""
 
     path: Path
@@ -51,10 +37,8 @@ class Warning:
     message: str
 
     def __str__(self) -> str:
-        return (
-            f"{self.path}:{self.line}:{self.column}: "
-            f"warning: {self.code} {self.message}"
-        )
+        """Format an editor-friendly, one-based source location and warning."""
+        return f"{self.path}:{self.line}:{self.column}: warning: {self.code} {self.message}"
 
 
 def find_python_files(paths: Iterable[Path]) -> Iterator[Path]:
@@ -75,18 +59,10 @@ def find_python_files(paths: Iterable[Path]) -> Iterator[Path]:
             candidates = []
             for root, directories, filenames in os.walk(path, onerror=walk_error):
                 # Prune in place so os.walk never enters excluded directories.
-                directories[:] = sorted(
-                    directory
-                    for directory in directories
-                    if directory not in EXCLUDED_DIRS
-                )
+                directories[:] = sorted(directory for directory in directories if directory not in EXCLUDED_DIRS)
 
                 # Sorting both directory and file names keeps diagnostics reproducible.
-                candidates.extend(
-                    Path(root) / filename
-                    for filename in sorted(filenames)
-                    if filename.endswith(".py")
-                )
+                candidates.extend(Path(root) / filename for filename in sorted(filenames) if filename.endswith(".py"))
         else:
             raise FileNotFoundError(f"{path}: path not found or not a file/directory")
 
@@ -107,120 +83,12 @@ def check_file(path: Path) -> list[Warning]:
     try:
         with tokenize.open(path) as handle:
             source = handle.read()
-        lines = source.splitlines()
-
-        # The AST identifies imports and literals that token counting would overcount.
-        import_lines: set[int] = set()
-        function_starts: set[int] = set()
-        string_continuations: set[int] = set()
         tree = ast.parse(source)
-        for node in ast.walk(tree):
-            if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
-                function_starts.add(node.lineno)
-            elif isinstance(node, (ast.Import, ast.ImportFrom)):
-                # Imports are excluded even when they span several physical lines.
-                import_lines.update(
-                    range(node.lineno, (node.end_lineno or node.lineno) + 1)
-                )
-
-            # Adjacent literals share one AST node, even across source lines.
-            elif isinstance(node, ast.Constant) and isinstance(node.value, (str, bytes)):
-                string_continuations.update(
-                    range(node.lineno + 1, (node.end_lineno or node.lineno) + 1)
-                )
-
-        # Tokenization distinguishes real comments from hashes inside strings.
-        standalone_comments: set[int] = set()
-        continued_comments: set[int] = set()
-        code_lines: set[int] = set()
-        warnings: list[Warning] = []
-        bracket_depth = 0
-
-        # Placement depends on bracket depth at the comment, not on indentation alone.
-        for token in tokenize.generate_tokens(io.StringIO(source).readline):
-            line_number, column = token.start
-            if token.type == tokenize.COMMENT:
-                if not token.line[:column].strip():
-                    standalone_comments.add(line_number)
-                    if bracket_depth:
-                        continued_comments.add(line_number)
-
-                # A shebang is special only on the first source line.
-                is_shebang = line_number == 1 and token.string.startswith("#!")
-                if (
-                    not is_shebang
-                    and token.string != "#"
-                    and not token.string.startswith("# ")
-                ):
-                    # Columns are one-based in diagnostics, unlike tokenize offsets.
-                    warnings.append(
-                        Warning(
-                            path, line_number, column + 1, "CM003",
-                            "expected a space after '#'",
-                        )
-                    )
-
-            # Count each physical line once, even if it contains several tokens.
-            elif token.type not in NON_CODE_TOKENS:
-                string_continuation = (
-                    token.type == tokenize.STRING
-                    and line_number in string_continuations
-                )
-                if line_number not in import_lines and not string_continuation:
-                    code_lines.add(line_number)
-
-                # Comments within open delimiters are exempt from CM002.
-                if token.type == tokenize.OP:
-                    if token.string in ("(", "[", "{"):
-                        bracket_depth += 1
-                    elif token.string in (")", "]", "}"):
-                        bracket_depth -= 1
+        facts = Source(source, tree)
     except (OSError, SyntaxError, UnicodeError, tokenize.TokenError):
         return []
 
-    # Only standalone comments and function boundaries reset frequency.
-    since_comment = 0
-    for line_number, line in enumerate(lines, start=1):
-        if line_number in function_starts:
-            since_comment = 0
-        if line_number in standalone_comments:
-            previous = lines[line_number - 2] if line_number > 1 else ""
-            starts_suite = previous.rstrip().endswith(":") and (
-                len(line.expandtabs()) - len(line.expandtabs().lstrip())
-                > len(previous.expandtabs()) - len(previous.expandtabs().lstrip())
-            )
-
-            # Consecutive comments belong to the same block.
-            if (
-                line_number > 1
-                and previous.strip()
-                and line_number - 1 not in standalone_comments
-                and line_number not in continued_comments
-                and not starts_suite
-            ):
-                # Report the block start rather than every comment in the block.
-                warnings.append(
-                    Warning(
-                        path, line_number, 1, "CM002",
-                        "expected a blank line before the comment block",
-                    )
-                )
-            since_comment = 0
-
-        # Emit once per uninterrupted run, at the first line over the limit.
-        elif line_number in code_lines:
-            since_comment += 1
-            if since_comment == MAX_CODE_LINES + 1:
-                warnings.append(
-                    Warning(
-                        path, line_number, 1, "CM001",
-                        f"more than {MAX_CODE_LINES} code lines without a standalone comment",
-                    )
-                )
-
-    # AST rules share the parsed tree and the same warning-only output format.
-    warnings.extend(
-        Warning(path, node.lineno, node.col_offset + 1, code, message)
-        for node, code, message in check_queries(tree)
-    )
+    # Every rule owns its findings; parsing and warning presentation stay shared.
+    warnings = [Warning(path, line, column, code, message) for check in COMMENT_RULES for line, column, code, message in check(facts)]
+    warnings.extend(Warning(path, node.lineno, node.col_offset + 1, code, message) for node, code, message in check_patterns(tree))
     return sorted(warnings, key=lambda warning: (warning.line, warning.column, warning.code))

@@ -5,7 +5,7 @@ import unittest
 from pathlib import Path
 
 from pyunslop import check_file
-from pyunslop.query_rules import check_queries
+from pyunslop.analysis import check_patterns
 
 IMPORTS = """\
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -13,16 +13,16 @@ from collections.abc import Sequence
 """
 
 
-def findings(source):
+def findings(source: str) -> list[tuple[int, str]]:
     tree = ast.parse(IMPORTS + textwrap.dedent(source))
-    return [(node.lineno, code) for node, code, _ in check_queries(tree)]
+    return [(node.lineno, code) for node, code, _ in check_patterns(tree)]
 
 
 class QueryRuleTests(unittest.TestCase):
-    def codes(self, source):
+    def codes(self, source: str) -> list[str]:
         return [code for _, code in findings(source)]
 
-    def test_py001_query_methods_and_consumers(self):
+    def test_py001_query_methods_and_consumers(self) -> None:
         for method in ("execute", "scalars", "stream", "stream_scalars"):
             for chain in ("all()", "first()", "scalars().all()", "unique().all()"):
                 with self.subTest(method=method, chain=chain):
@@ -30,7 +30,7 @@ class QueryRuleTests(unittest.TestCase):
                     expected = ["PY108", "PY001"] if method == "execute" and chain == "scalars().all()" else ["PY001"]
                     self.assertEqual(self.codes(source), expected)
 
-    def test_named_result_is_allowed(self):
+    def test_named_result_is_allowed(self) -> None:
         source = """
         async def fetch(session: AsyncSession) -> Sequence[User]:
             result = await session.scalars(statement)
@@ -38,13 +38,13 @@ class QueryRuleTests(unittest.TestCase):
         """
         self.assertEqual(self.codes(source), [])
 
-    def test_py002_list_contract_on_direct_query_return(self):
+    def test_py002_list_contract_on_direct_query_return(self) -> None:
         for expression in ("list(result.all())", "result.all()"):
             with self.subTest(expression=expression):
                 source = f"async def fetch(s: AsyncSession) -> list[User]:\n    result = await s.scalars(stmt)\n    return {expression}\n"
                 self.assertEqual(self.codes(source), ["PY002"])
 
-    def test_py002_typing_list_alias_and_string_annotation(self):
+    def test_py002_typing_list_alias_and_string_annotation(self) -> None:
         source = """
         from typing import List as MutableList
         async def fetch(s: AsyncSession) -> "MutableList[User]":
@@ -53,7 +53,7 @@ class QueryRuleTests(unittest.TestCase):
         """
         self.assertEqual(self.codes(source), ["PY002", "PY108"])
 
-    def test_py002_reports_once_per_function(self):
+    def test_py002_reports_once_per_function(self) -> None:
         source = """
         async def fetch(s: AsyncSession) -> list[User]:
             result = await s.scalars(stmt)
@@ -63,7 +63,7 @@ class QueryRuleTests(unittest.TestCase):
         """
         self.assertEqual(self.codes(source), ["PY002"])
 
-    def test_py003_sequence_return_and_assignment(self):
+    def test_py003_sequence_return_and_assignment(self) -> None:
         for statement in (
             "return list(result.all())",
             "users = list(result.all())",
@@ -73,7 +73,7 @@ class QueryRuleTests(unittest.TestCase):
                 source = f"async def fetch(s: AsyncSession) -> Sequence[User]:\n    result = await s.scalars(stmt)\n    {statement}\n"
                 self.assertEqual(self.codes(source), ["PY003"])
 
-    def test_py003_preserves_explicit_mutable_contracts(self):
+    def test_py003_preserves_explicit_mutable_contracts(self) -> None:
         for statement in (
             "users: list[User] = list(result.all())",
             "users: list[User]\n    users = list(result.all())",
@@ -84,7 +84,7 @@ class QueryRuleTests(unittest.TestCase):
                 source = f"async def fetch(s: AsyncSession):\n    result = await s.scalars(stmt)\n    {statement}\n"
                 self.assertEqual(self.codes(source), [])
 
-    def test_import_aliases_and_session_constructor(self):
+    def test_import_aliases_and_session_constructor(self) -> None:
         source = """
         import sqlalchemy.ext.asyncio as sa
         async def fetch():
@@ -93,7 +93,7 @@ class QueryRuleTests(unittest.TestCase):
         """
         self.assertEqual(self.codes(source), ["PY001"])
 
-    def test_sqlmodel_exec(self):
+    def test_sqlmodel_exec(self) -> None:
         source = """
         from sqlmodel.ext.asyncio.session import AsyncSession as ModelSession
         async def fetch(s: ModelSession):
@@ -101,7 +101,7 @@ class QueryRuleTests(unittest.TestCase):
         """
         self.assertEqual(self.codes(source), ["PY001"])
 
-    def test_session_factory_context_manager(self):
+    def test_session_factory_context_manager(self) -> None:
         source = """
         from sqlalchemy.ext.asyncio import async_sessionmaker
         sessions = async_sessionmaker(engine)
@@ -111,7 +111,7 @@ class QueryRuleTests(unittest.TestCase):
         """
         self.assertEqual(self.codes(source), ["PY108", "PY001"])
 
-    def test_typed_result_parameter(self):
+    def test_typed_result_parameter(self) -> None:
         source = """
         from sqlalchemy.engine import ScalarResult
         def consume(result: ScalarResult[User]) -> Sequence[User]:
@@ -119,7 +119,7 @@ class QueryRuleTests(unittest.TestCase):
         """
         self.assertEqual(self.codes(source), ["PY003"])
 
-    def test_unrelated_apis_and_plain_lists_are_ignored(self):
+    def test_unrelated_apis_and_plain_lists_are_ignored(self) -> None:
         source = """
         from other_library import AsyncSession as OtherSession
         async def fetch(session: OtherSession) -> list[User]:
@@ -131,7 +131,7 @@ class QueryRuleTests(unittest.TestCase):
         """
         self.assertEqual(self.codes(source), [])
 
-    def test_untyped_session_name_is_not_enough(self):
+    def test_untyped_session_name_is_not_enough(self) -> None:
         source = """
         async def fetch(session):
             result = await session.execute(stmt)
@@ -140,7 +140,7 @@ class QueryRuleTests(unittest.TestCase):
         """
         self.assertEqual(self.codes(source), [])
 
-    def test_reassignments_and_parameter_shadowing_clear_provenance(self):
+    def test_reassignments_and_parameter_shadowing_clear_provenance(self) -> None:
         source = """
         session = AsyncSession(engine)
         async def fetch(session):
@@ -152,7 +152,7 @@ class QueryRuleTests(unittest.TestCase):
         """
         self.assertEqual(self.codes(source), [])
 
-    def test_conditional_reassignment_does_not_leak_provenance(self):
+    def test_conditional_reassignment_does_not_leak_provenance(self) -> None:
         source = """
         async def fetch(s: AsyncSession):
             if condition:
@@ -163,14 +163,14 @@ class QueryRuleTests(unittest.TestCase):
         """
         self.assertEqual(self.codes(source), [])
 
-    def test_scalar_values_are_not_result_objects(self):
+    def test_scalar_values_are_not_result_objects(self) -> None:
         source = """
         async def fetch(s: AsyncSession):
             return (await s.scalar(stmt)).all()
         """
         self.assertEqual(self.codes(source), [])
 
-    def test_loop_target_does_not_inherit_result_provenance(self):
+    def test_loop_target_does_not_inherit_result_provenance(self) -> None:
         source = """
         async def fetch(s: AsyncSession):
             result = await s.execute(stmt)
@@ -179,7 +179,7 @@ class QueryRuleTests(unittest.TestCase):
         """
         self.assertEqual(self.codes(source), [])
 
-    def test_argument_mutable_contract_is_preserved(self):
+    def test_argument_mutable_contract_is_preserved(self) -> None:
         source = """
         async def fetch(s: AsyncSession, users: list[User]):
             result = await s.execute(stmt)
@@ -187,7 +187,7 @@ class QueryRuleTests(unittest.TestCase):
         """
         self.assertEqual(self.codes(source), [])
 
-    def test_conditional_mutable_contract_is_not_lost(self):
+    def test_conditional_mutable_contract_is_not_lost(self) -> None:
         source = """
         async def fetch(s: AsyncSession):
             result = await s.execute(stmt)
@@ -199,7 +199,7 @@ class QueryRuleTests(unittest.TestCase):
         """
         self.assertEqual(self.codes(source), [])
 
-    def test_sync_sqlmodel_query_results(self):
+    def test_sync_sqlmodel_query_results(self) -> None:
         source = """
         from sqlmodel import Session
         def fetch(s: Session) -> Sequence[User]:
@@ -208,7 +208,7 @@ class QueryRuleTests(unittest.TestCase):
         """
         self.assertEqual(self.codes(source), ["PY003"])
 
-    def test_shadowed_list_is_not_a_copy(self):
+    def test_shadowed_list_is_not_a_copy(self) -> None:
         source = """
         async def fetch(s: AsyncSession, list):
             result = await s.execute(stmt)
@@ -216,7 +216,7 @@ class QueryRuleTests(unittest.TestCase):
         """
         self.assertEqual(self.codes(source), [])
 
-    def test_warning_location_and_integration(self):
+    def test_warning_location_and_integration(self) -> None:
         source = IMPORTS + "async def fetch(s: AsyncSession):\n    return (await s.execute(stmt)).all()\n"
         with tempfile.TemporaryDirectory() as directory:
             path = Path(directory) / "query.py"
