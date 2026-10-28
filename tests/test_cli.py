@@ -26,8 +26,8 @@ def test_warnings_exit_successfully_without_modifying_source(source_file: Path, 
     source_file.write_text(source)
     result, stdout, stderr = run_cli()
     assert result == 0
-    assert "warning: CM003" in stdout
-    assert "warning: CM001" in stdout
+    assert "warning: SLOP003" in stdout
+    assert "warning: SLOP001" in stdout
     assert "2 warning(s)" in stderr
     assert source_file.read_text() == source
 
@@ -54,7 +54,7 @@ def test_model_field_order_is_warning_only(source_file: Path, run_cli: Callable[
     source_file.write_text(source)
     result, stdout, stderr = run_cli()
     assert (result, stderr) == (0, "Found 1 warning(s).\n")
-    assert "example.py:4:5: warning: PY017" in stdout
+    assert "example.py:4:5: warning: SLOP017" in stdout
     assert source_file.read_text() == source
 
 
@@ -66,7 +66,7 @@ def test_invalid_source_is_skipped_and_scan_continues(source_file: Path, run_cli
     result, stdout, stderr = run_cli()
     assert result == 0
     assert source_file.name not in stdout
-    assert "warning: CM003" in stdout
+    assert "warning: SLOP003" in stdout
     assert "1 warning(s)" in stderr
 
 
@@ -111,7 +111,7 @@ def test_query_findings_are_warnings(source_file: Path, run_cli: Callable[..., t
     )
     result, stdout, _ = run_cli()
     assert result == 0
-    for code in ("PY001", "PY002", "PY003"):
+    for code in ("SLOP005", "SLOP006", "SLOP007"):
         assert f"warning: {code}" in stdout
 
 
@@ -151,7 +151,7 @@ def test_additional_rules_are_warning_only(source_file: Path, run_cli: Callable[
     )
     result, stdout, _ = run_cli()
     assert result == 0
-    for code in ("PY004", "PY005", "PY006", "PY009", "PY010"):
+    for code in ("SLOP008", "SLOP009", "SLOP010", "SLOP011", "SLOP012"):
         assert f"warning: {code}" in stdout
 
 
@@ -160,8 +160,8 @@ def test_repository_policy_is_always_enabled_and_warning_only(source_file: Path,
     source_file.write_text('"""Module docs."""\nfrom src.errors import ConflictError\n')
     result, stdout, _ = run_cli()
     assert result == 0
-    assert "warning: PY013" in stdout
-    assert "warning: PY014" in stdout
+    assert "warning: SLOP013" in stdout
+    assert "warning: SLOP014" in stdout
 
 
 def test_review_candidates_are_warning_only(source_file: Path, run_cli: Callable[..., tuple[int, str, str]]) -> None:
@@ -181,15 +181,15 @@ def test_review_candidates_are_warning_only(source_file: Path, run_cli: Callable
     )
     result, stdout, _ = run_cli()
     assert result == 0
-    for code in ("PY107", "PY108", "PY109", "PY113"):
+    for code in ("SLOP020", "SLOP021", "SLOP022", "SLOP025"):
         assert f"warning: {code}" in stdout
 
 
 def test_single_use_constant_is_warning_only(source_file: Path, run_cli: Callable[..., tuple[int, str, str]]) -> None:
-    """Report PY114 without changing source or failing the command."""
+    """Report SLOP026 without changing source or failing the command."""
     source = "_TIMEOUT = 30\nconnect(timeout=_TIMEOUT)\n"
     source_file.write_text(source)
     result, stdout, _ = run_cli()
     assert result == 0
-    assert "warning: PY114" in stdout
+    assert "warning: SLOP026" in stdout
     assert source_file.read_text() == source

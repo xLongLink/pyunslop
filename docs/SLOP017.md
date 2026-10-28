@@ -1,4 +1,4 @@
-# PY017: Order model fields by name length
+# SLOP017: Order model fields by name length
 
 Within each blank-line-separated section of a directly recognized Pydantic
 `BaseModel`, order annotated fields from shortest name to longest. Equal-length

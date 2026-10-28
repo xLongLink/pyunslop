@@ -1,9 +1,9 @@
 import ast
-from . import http
-from .bindings import BindingVisitor
-from ..contracts import FunctionNode
+from pyunslop.analysis import http
+from pyunslop.analysis.bindings import BindingVisitor
+from pyunslop.contracts import FunctionNode
 from dataclasses import field, dataclass
-from ..diagnostics import Finding
+from pyunslop.diagnostics import Finding
 
 
 @dataclass
@@ -62,9 +62,10 @@ class EndpointAnalyzer(BindingVisitor):
         # Decorator options are resolved after restoring the enclosing import scope.
         if self.annotation_kind(node.returns) != "@response" and not (endpoint.raw_returns and all(endpoint.raw_returns)):
             for route in endpoint.routes:
+
                 # Each decorator may declare a different serialization contract.
                 if http.needs_response_model(route, self.qualified):
-                    self.findings.append(Finding.at(route, "PY009", "declare response_model explicitly for this JSON endpoint"))
+                    self.findings.append(Finding.at(route, "SLOP011", "declare response_model explicitly for this JSON endpoint"))
 
     visit_AsyncFunctionDef = visit_FunctionDef
 
@@ -95,7 +96,7 @@ class EndpointAnalyzer(BindingVisitor):
                 # Disabling a schema alone does not opt out of envelope checks.
                 if node.value is not None and self.kind(node.value) == "@envelope":
                     self.findings.append(
-                        Finding.at(node.value, "PY010", "return the API payload directly instead of a generic success envelope")
+                        Finding.at(node.value, "SLOP012", "return the API payload directly instead of a generic success envelope")
                     )
         self.generic_visit(node)
 
@@ -110,11 +111,12 @@ class EndpointAnalyzer(BindingVisitor):
         # Imported model transformations cannot be proven absent by this local check.
         model = self.qualified(value.func.value)
         if model and model not in self.transforming_models and endpoint.response_models == {model}:
+
             # This is a review candidate, not proof that validation is redundant.
             return [
                 Finding.at(
                     value,
-                    "PY101",
+                    "SLOP018",
                     "route already validates this response model; avoid reconstruction unless validation intentionally transforms it",
                 )
             ]

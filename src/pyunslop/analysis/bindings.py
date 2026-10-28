@@ -1,6 +1,6 @@
 import ast
 from typing import TypeVar
-from ..contracts import LoopNode, WithNode, FunctionNode
+from pyunslop.contracts import LoopNode, WithNode, FunctionNode
 from dataclasses import dataclass
 
 Value = TypeVar("Value")
@@ -50,6 +50,7 @@ class BindingVisitor(ast.NodeVisitor):
     def annotation(self, node: ast.expr | None) -> str:
         """Resolve ordinary, generic, and quoted outer annotation names."""
         if isinstance(node, ast.Constant) and isinstance(node.value, str):
+
             # Invalid forward references have no reliable identity.
             try:
                 node = ast.parse(node.value, mode="eval").body
@@ -118,6 +119,7 @@ class BindingVisitor(ast.NodeVisitor):
         if isinstance(target, ast.Name):
             self.bindings[target.id] = Binding(value=value)
         elif isinstance(target, (ast.Tuple, ast.List)):
+
             # Unpacking does not preserve the source value's database provenance.
             for element in target.elts:
                 self.bind(element, "")

@@ -30,6 +30,7 @@ def find_python_files(paths: Iterable[Path]) -> Iterator[Path]:
         raise error
 
     for path in paths:
+
         # Explicit files bypass directory exclusions, but still require a Python suffix.
         if path.is_file():
             candidates = [path] if path.suffix == ".py" else []
@@ -38,6 +39,7 @@ def find_python_files(paths: Iterable[Path]) -> Iterator[Path]:
         elif path.is_dir():
             candidates = []
             for root, directories, filenames in os.walk(path, onerror=walk_error):
+
                 # Prune in place so os.walk never enters excluded directories.
                 directories[:] = sorted(directory for directory in directories if directory not in EXCLUDED_DIRS)
                 candidates.extend(Path(root) / filename for filename in sorted(filenames) if filename.endswith(".py"))

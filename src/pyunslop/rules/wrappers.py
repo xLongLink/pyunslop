@@ -2,13 +2,13 @@ from __future__ import annotations
 
 import ast
 from typing import TYPE_CHECKING
-from ..diagnostics import Finding
+from pyunslop.diagnostics import Finding
 
 if TYPE_CHECKING:
-    from ..contracts import FunctionNode, QualifiedName
-    from ..analysis.bindings import BindingVisitor
+    from pyunslop.contracts import FunctionNode, QualifiedName
+    from pyunslop.analysis.bindings import BindingVisitor
 
-CODE = "PY110"
+CODE = "SLOP023"
 
 
 def forwarded_function(node: FunctionNode) -> bool:

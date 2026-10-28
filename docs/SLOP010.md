@@ -1,4 +1,4 @@
-# PY006: Name domain instances
+# SLOP010: Name domain instances
 
 Assign `Postgres` and `Kubernetes` instances before calling their methods,
 including methods reached through attributes. Imported aliases and

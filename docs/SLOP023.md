@@ -1,4 +1,4 @@
-# PY110: Review transparent wrappers
+# SLOP023: Review transparent wrappers
 
 Review exact private positional forwarding functions and private empty
 subclasses, plus empty FastAPI/Starlette test-client subclasses. Public

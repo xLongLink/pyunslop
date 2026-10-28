@@ -15,7 +15,7 @@ SUPPRESSION_DIRECTIVES = (
     "# noqa",
     "#noqa: F401",
     "# NoQa: F401, F841",
-    "# noqa: CM004",
+    "# noqa: SLOP004",
     # File-wide forms are also forbidden inside inline comment tokens.
     "# ruff: noqa",
     "# flake8: noqa: F401",
@@ -27,7 +27,7 @@ SUPPRESSION_DIRECTIVES = (
 def test_frequency_reports_once_per_run_at_threshold(check_source: Callable[[str], list[CheckWarning]]) -> None:
     """Report the first line beyond the fixed ten-point budget."""
     warnings = check_source("a = 1\n" * 13)
-    assert [(w.code, w.line) for w in warnings] == [("CM001", 11)]
+    assert [(w.code, w.line) for w in warnings] == [("SLOP001", 11)]
 
 
 @pytest.mark.parametrize(
@@ -40,42 +40,42 @@ def test_literal_containers_cost_one_point(
     source = f"VALUES = {opening}\n" + f"    {item}\n" * 15 + closing + "\n"
     assert check_source(source + "work()\n" * 9) == []
     warnings = check_source(source + "work()\n" * 10)
-    assert [(w.code, w.line) for w in warnings] == [("CM001", 27)]
+    assert [(w.code, w.line) for w in warnings] == [("SLOP001", 27)]
 
 
 @pytest.mark.parametrize("item", ["load(),", "value,", "1 + 2,", "*items,", "f'{value}',"])
 def test_executable_collections_are_not_collapsed(check_source: Callable[[str], list[CheckWarning]], item: str) -> None:
     """Do not hide runtime expressions inside collection syntax."""
     warnings = check_source("VALUES = [\n" + f"    {item}\n" * 12 + "]\n")
-    assert [(w.code, w.line) for w in warnings] == [("CM001", 11)]
+    assert [(w.code, w.line) for w in warnings] == [("SLOP001", 11)]
 
 
 @pytest.mark.parametrize("expression", ["[\n    item\n    for item in items\n]", "{\n    **mapping,\n}"])
 def test_comprehensions_and_dict_unpacking_still_count(check_source: Callable[[str], list[CheckWarning]], expression: str) -> None:
     """Retain every executable continuation line."""
     warnings = check_source("work()\n" * 9 + f"VALUES = {expression}\n")
-    assert [(w.code, w.line) for w in warnings] == [("CM001", 11)]
+    assert [(w.code, w.line) for w in warnings] == [("SLOP001", 11)]
 
 
 def test_literal_end_line_keeps_executable_tokens(check_source: Callable[[str], list[CheckWarning]]) -> None:
     """Honor token boundaries, including non-ASCII AST column offsets."""
     source = "work()\n" * 9 + "é = [\n    1,\n]; work()\n"
     warnings = check_source(source)
-    assert [(w.code, w.line) for w in warnings] == [("CM001", 12)]
+    assert [(w.code, w.line) for w in warnings] == [("SLOP001", 12)]
 
 
 @pytest.mark.parametrize("header", ["if ready:", "for item in items:", "while ready:", "with resource:"])
 def test_control_headers_cost_two_points(check_source: Callable[[str], list[CheckWarning]], header: str) -> None:
     """Warn when a header jumps from nine points to eleven."""
     warnings = check_source("work()\n" * 9 + header + "\n    work()\n")
-    assert [(w.code, w.line) for w in warnings] == [("CM001", 10)]
+    assert [(w.code, w.line) for w in warnings] == [("SLOP001", 10)]
 
 
 def test_nesting_weights_only_control_headers(check_source: Callable[[str], list[CheckWarning]]) -> None:
     """Charge two for the loop, three for the branch, and one per call."""
     source = "for item in items:\n    if item.enabled:\n" + "        work()\n" * 6
     warnings = check_source(source)
-    assert [(w.code, w.line) for w in warnings] == [("CM001", 8)]
+    assert [(w.code, w.line) for w in warnings] == [("SLOP001", 8)]
 
 
 @pytest.mark.parametrize(
@@ -106,14 +106,14 @@ def test_nested_functions_do_not_inherit_control_depth(check_source: Callable[[s
     source = "if outer:\n    " + header + "\n        if inner:\n" + "            work()\n" * 7
     assert check_source(source) == []
     warnings = check_source(source + "            work()\n")
-    assert [(w.code, w.line) for w in warnings] == [("CM001", 11)]
+    assert [(w.code, w.line) for w in warnings] == [("SLOP001", 11)]
 
 
 def test_comment_resets_points_but_not_control_depth(check_source: Callable[[str], list[CheckWarning]]) -> None:
     """Retain nesting after an explanation resets the accumulated budget."""
     source = "for item in items:\n    # Explain this branch.\n    if ready:\n" + "        work()\n" * 8
     warnings = check_source(source)
-    assert [(w.code, w.line) for w in warnings] == [("CM001", 11)]
+    assert [(w.code, w.line) for w in warnings] == [("SLOP002", 2), ("SLOP001", 11)]
 
 
 def test_imports_and_blank_lines_do_not_count(check_source: Callable[[str], list[CheckWarning]]) -> None:
@@ -125,7 +125,7 @@ def test_imports_and_blank_lines_do_not_count(check_source: Callable[[str], list
 def test_inline_comments_do_not_reset_frequency(check_source: Callable[[str], list[CheckWarning]]) -> None:
     """Require standalone comments rather than trailing annotations."""
     warnings = check_source("a = 1  # First\n" * 10 + "\nb = 2\n")
-    assert [(w.code, w.line) for w in warnings] == [("CM001", 12)]
+    assert [(w.code, w.line) for w in warnings] == [("SLOP001", 12)]
 
 
 def test_standalone_comments_reset_frequency(check_source: Callable[[str], list[CheckWarning]]) -> None:
@@ -150,13 +150,20 @@ def test_multiline_and_adjacent_strings_count_once(check_source: Callable[[str],
 def test_comment_block_requires_one_blank_line(check_source: Callable[[str], list[CheckWarning]]) -> None:
     """Report only the start of an unseparated comment block."""
     warnings = check_source("x = 1\n# First\n# Second\ny = 2\n")
-    assert [(w.code, w.line) for w in warnings] == [("CM002", 2)]
+    assert [(w.code, w.line) for w in warnings] == [("SLOP002", 2)]
 
 
-def test_suite_and_continuation_comments_need_no_blank_line(check_source: Callable[[str], list[CheckWarning]]) -> None:
-    """Exempt suite starts and comments inside continued expressions."""
+def test_suite_comments_require_separation_but_continuations_are_exempt(check_source: Callable[[str], list[CheckWarning]]) -> None:
+    """Require suite separation without flagging bracketed expression comments."""
     source = "if True:\n    # Explain this branch.\n    values = [\n        # Explain this value.\n        1,\n    ]\n"
-    assert check_source(source) == []
+    assert [(warning.code, warning.line) for warning in check_source(source)] == [("SLOP002", 2)]
+
+
+def test_loop_comment_requires_separation(check_source: Callable[[str], list[CheckWarning]]) -> None:
+    """Require a blank line before a loop's opening comment."""
+    source = "for path in paths:\n    # Explicit files bypass exclusions.\n    if path.is_file():\n        candidates = [path]\n"
+    assert [(warning.code, warning.line) for warning in check_source(source)] == [("SLOP002", 2)]
+    assert check_source(source.replace("paths:\n", "paths:\n\n")) == []
 
 
 def test_first_line_and_separated_comments_are_allowed(check_source: Callable[[str], list[CheckWarning]]) -> None:
@@ -167,14 +174,14 @@ def test_first_line_and_separated_comments_are_allowed(check_source: Callable[[s
 def test_comment_spacing_and_locations(check_source: Callable[[str], list[CheckWarning]]) -> None:
     """Keep shebang exemptions and one-based comment locations."""
     warnings = check_source("#!/usr/bin/env python3\n#\nx = 1  #bad\n\n#bad\n")
-    assert [(w.code, w.line, w.column) for w in warnings] == [("CM003", 3, 8), ("CM003", 5, 1)]
-    assert ":3:8: warning: CM003 " in str(warnings[0])
+    assert [(w.code, w.line, w.column) for w in warnings] == [("SLOP003", 3, 8), ("SLOP003", 5, 1)]
+    assert ":3:8: warning: SLOP003 " in str(warnings[0])
 
 
 @pytest.mark.parametrize("directive", SUPPRESSION_DIRECTIVES)
 def test_noqa_directive_variants(check_source: Callable[[str], list[CheckWarning]], directive: str) -> None:
     """Reject inline, blanket, code-specific, and file-wide suppressions."""
-    findings = [warning for warning in check_source(f"value = 1  {directive}\n") if warning.code == "CM004"]
+    findings = [warning for warning in check_source(f"value = 1  {directive}\n") if warning.code == "SLOP004"]
     assert [(warning.line, warning.column) for warning in findings] == [(1, 12)]
     assert findings[0].message == "noqa suppression directives are forbidden"
 
@@ -183,7 +190,7 @@ def test_noqa_locations_inside_comments(check_source: Callable[[str], list[Check
     """Locate the directive itself after indentation or explanatory text."""
     source = "if ready:\n    value = 1  # explanation # noqa: F401\n"
     warnings = check_source(source)
-    assert [(warning.code, warning.line, warning.column) for warning in warnings] == [("CM004", 2, 30)]
+    assert [(warning.code, warning.line, warning.column) for warning in warnings] == [("SLOP004", 2, 30)]
 
 
 def test_noqa_strings_and_ordinary_comments_are_ignored(check_source: Callable[[str], list[CheckWarning]]) -> None:

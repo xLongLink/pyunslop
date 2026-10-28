@@ -1,4 +1,4 @@
-# CM001: Uncommented complexity budget
+# SLOP001: Uncommented complexity budget
 
 Warn when an uncommented run exceeds a fixed budget of 10 points:
 

@@ -1,9 +1,9 @@
 from __future__ import annotations
 
 import ast
-from ..diagnostics import Finding
+from pyunslop.diagnostics import Finding
 
-CODE = "PY111"
+CODE = "SLOP024"
 
 
 def borrowed_client_class(node: ast.ClassDef) -> bool:
@@ -51,6 +51,7 @@ def borrowed_client_class(node: ast.ClassDef) -> bool:
             # Every use of self must resolve only to the originally borrowed field.
             for child in ast.iter_child_nodes(parent):
                 if isinstance(child, ast.Name) and child.id == "self":
+
                     # Passing self elsewhere can expose behavior beyond the borrowed client.
                     if not isinstance(parent, ast.Attribute) or parent.attr != target.attr:
                         return False

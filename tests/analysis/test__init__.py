@@ -18,8 +18,8 @@ def test_domains_are_independent_on_the_same_tree() -> None:
     tree = ast.parse(source)
     queries = analyze_queries(tree)
     endpoints = analyze_endpoints(tree)
-    assert [finding.code for finding in queries] == ["PY001"]
-    assert [finding.code for finding in endpoints] == ["PY009"]
+    assert [finding.code for finding in queries] == ["SLOP005"]
+    assert [finding.code for finding in endpoints] == ["SLOP011"]
 
     # Reversing the order must not expose another analyzer's state.
     assert analyze_endpoints(tree) == endpoints
@@ -32,4 +32,4 @@ def test_domains_are_independent_on_the_same_tree() -> None:
 def test_policies_are_always_enabled() -> None:
     """Enable both repository policies without requiring configuration."""
     source = '"""Module docs."""\nfrom src.errors import ConflictError\n'
-    assert sorted(codes(source)) == ["PY013", "PY014"]
+    assert sorted(codes(source)) == ["SLOP013", "SLOP014"]

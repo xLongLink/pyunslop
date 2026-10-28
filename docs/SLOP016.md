@@ -1,4 +1,4 @@
-# PY016: Prefer pytest tests
+# SLOP016: Prefer pytest tests
 
 This fixed policy flags absolute `unittest` imports, including aliases,
 `from` imports, and submodules such as `unittest.mock`. Prefer plain pytest

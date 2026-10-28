@@ -1,11 +1,11 @@
 import ast
-from . import wrappers, borrowed_client, materialization, named_instances
-from ..source import Source
-from .constants import single_use_constants
-from ..contracts import FunctionNode
-from ..diagnostics import Finding
-from .comprehensions import check_comprehensions
-from ..analysis.bindings import BindingVisitor
+from pyunslop.rules import wrappers, borrowed_client, materialization, named_instances
+from pyunslop.source import Source
+from pyunslop.rules.constants import single_use_constants
+from pyunslop.contracts import FunctionNode
+from pyunslop.diagnostics import Finding
+from pyunslop.rules.comprehensions import check_comprehensions
+from pyunslop.analysis.bindings import BindingVisitor
 
 
 class SimplificationAnalyzer(BindingVisitor):

@@ -1,16 +1,16 @@
 import tokenize
-from .source import Source
+from pyunslop.source import Source
 from pathlib import Path
-from .analysis import check_patterns
-from .diagnostics import Warning as CheckWarning
-from .rules.comments import check_comments
+from pyunslop.analysis import check_patterns
+from pyunslop.diagnostics import Warning as CheckWarning
+from pyunslop.rules.comments import check_comments
 
 
 def check_file(path: Path) -> list[CheckWarning]:
     """Return fixed-preset warnings without editing files or raising findings.
 
     Unreadable or invalid source is skipped. All rules are enabled, with a fixed
-    ten-point complexity budget. Function definitions and standalone comments reset CM001.
+    ten-point complexity budget. Function definitions and standalone comments reset SLOP001.
     """
     try:
         facts = Source.read(path)

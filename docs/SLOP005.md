@@ -1,4 +1,4 @@
-# PY001: Name asynchronous query results
+# SLOP005: Name asynchronous query results
 
 Assign an awaited SQLAlchemy or SQLModel query result before consuming it.
 Recognition requires known imports, annotations, constructors, factories, or

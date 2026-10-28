@@ -1,9 +1,9 @@
 import ast
-from . import query_types
-from .bindings import BindingVisitor
-from ..ast_utils import name_loads, scope_nodes
-from ..contracts import LoopNode, FunctionNode
-from ..diagnostics import Finding
+from pyunslop.analysis import query_types
+from pyunslop.analysis.bindings import BindingVisitor
+from pyunslop.ast_utils import name_loads, scope_nodes
+from pyunslop.contracts import LoopNode, FunctionNode
+from pyunslop.diagnostics import Finding
 
 SCALAR_API_MESSAGE = "use session.scalars() instead of execute().scalars(); preserve one()/one_or_none() cardinality checks"
 REFRESH_MESSAGE = "review post-commit refresh: check expire_on_commit, server defaults, and required relationships before removing it"
@@ -57,7 +57,7 @@ class QueryAnalyzer(BindingVisitor):
     def visit_Attribute(self, node: ast.Attribute) -> None:
         """Identify unnamed asynchronous query results."""
         if isinstance(node.value, ast.Await) and self.kind(node.value) in query_types.RESULT_KINDS:
-            self.findings.append(Finding.at(node, "PY001", "name the asynchronous query result before consuming it"))
+            self.findings.append(Finding.at(node, "SLOP005", "name the asynchronous query result before consuming it"))
         self.generic_visit(node)
 
     def visit_Return(self, node: ast.Return) -> None:
@@ -73,7 +73,7 @@ class QueryAnalyzer(BindingVisitor):
                 and function.returns is not None
             ):
                 self.reported_returns.add(function)
-                self.findings.append(Finding.at(function.returns, "PY002", "use Sequence[T] for a read-only query-result return type"))
+                self.findings.append(Finding.at(function.returns, "SLOP006", "use Sequence[T] for a read-only query-result return type"))
 
         # Return expressions may contain additional query operations.
         self.generic_visit(node)
@@ -93,7 +93,7 @@ class QueryAnalyzer(BindingVisitor):
             # Unknown or streaming results must retain their materialization semantics.
             and self.kind(iterable.func.value) in query_types.BUFFERED_RESULTS
         ):
-            self.findings.append(Finding.at(iterable, "PY004", "iterate the buffered query result directly instead of calling all()"))
+            self.findings.append(Finding.at(iterable, "SLOP008", "iterate the buffered query result directly instead of calling all()"))
 
         # One-column unpacking preserves a distinct cardinality contract.
         if (
@@ -102,7 +102,7 @@ class QueryAnalyzer(BindingVisitor):
             and self.kind(node.iter) == "@single_execute_result"
         ):
             self.findings.append(
-                Finding.at(node.target, "PY108", "use session.scalars() for this single-column query; preserve cardinality checks")
+                Finding.at(node.target, "SLOP021", "use session.scalars() for this single-column query; preserve cardinality checks")
             )
 
         # Bind loop targets only after checking the incoming query provenance.
@@ -123,10 +123,11 @@ class QueryAnalyzer(BindingVisitor):
         # One-element unpacking is eligible; multi-column row contracts stay intact.
         for target in node.targets:
             if isinstance(target, (ast.Tuple, ast.List)) and len(target.elts) == 1 and single_row:
+
                 # Keep the one/first consumer's cardinality requirement in the warning.
                 self.findings.append(
                     Finding.at(
-                        target, "PY108", "use session.scalars() for single-column row unpacking; preserve the existing cardinality check"
+                        target, "SLOP021", "use session.scalars() for single-column row unpacking; preserve the existing cardinality check"
                     )
                 )
 
@@ -137,6 +138,7 @@ class QueryAnalyzer(BindingVisitor):
         """Require SQL ownership without crossing an unrelated enclosing call."""
         for parent in reversed(self.parents[:-1]):
             if isinstance(parent, ast.Call):
+
                 # Known expression constructors establish SQL ownership directly.
                 if self.qualified(parent.func) in query_types.EXPRESSION_FUNCTIONS:
                     return True
@@ -153,7 +155,7 @@ class QueryAnalyzer(BindingVisitor):
         """Check copies, SQL expression inputs, scalar APIs, and size-only loads."""
         parent = self.parents[-2] if len(self.parents) > 1 else None
         if self.is_copy(node) and self.accepts_sequence(parent):
-            self.findings.append(Finding.at(node, "PY003", "avoid list() around query-result rows when a sequence is sufficient"))
+            self.findings.append(Finding.at(node, "SLOP007", "avoid list() around query-result rows when a sequence is sufficient"))
 
         # Unrelated objects may also define in_; require expression provenance.
         if (
@@ -164,7 +166,7 @@ class QueryAnalyzer(BindingVisitor):
             and not node.keywords
             and (self.kind(node.func.value) == "@expression" or self.in_expression_context())
         ):
-            self.findings.append(Finding.at(node.args[0], "PY005", "pass a generator expression directly to SQLAlchemy in_()"))
+            self.findings.append(Finding.at(node.args[0], "SLOP009", "pass a generator expression directly to SQLAlchemy in_()"))
 
         # Scalar APIs still need the original cardinality and null-handling consumer.
         if (
@@ -172,7 +174,7 @@ class QueryAnalyzer(BindingVisitor):
             and node.func.attr == "scalars"
             and self.kind(node.func.value) in query_types.EXECUTE_RESULTS
         ):
-            self.findings.append(Finding.at(node, "PY108", SCALAR_API_MESSAGE))
+            self.findings.append(Finding.at(node, "SLOP021", SCALAR_API_MESSAGE))
         self.findings.extend(self.size_only_load(node, parent))
         self.generic_visit(node)
 
@@ -206,7 +208,7 @@ class QueryAnalyzer(BindingVisitor):
         if candidate:
             return [
                 Finding.at(
-                    node, "PY109", "review an existence or bounded query instead of loading rows solely for size/truth; preserve locking"
+                    node, "SLOP022", "review an existence or bounded query instead of loading rows solely for size/truth; preserve locking"
                 )
             ]
         return []
@@ -215,6 +217,7 @@ class QueryAnalyzer(BindingVisitor):
         """Review adjacent same-session commit/refresh calls without rewriting."""
         refresh = called_method(node)
         if refresh and refresh.attr == "refresh" and self.kind(refresh.value) == "@session":
+
             # Search statement lists, not arbitrary sibling AST fields.
             for _, statements in ast.iter_fields(self.parents[-2]):
                 if not isinstance(statements, list) or node not in statements:
@@ -224,7 +227,7 @@ class QueryAnalyzer(BindingVisitor):
                 index = statements.index(node)
                 commit = called_method(statements[index - 1]) if index else None
                 if commit and commit.attr == "commit" and ast.dump(commit.value) == ast.dump(refresh.value):
-                    self.findings.append(Finding.at(node, "PY113", REFRESH_MESSAGE))
+                    self.findings.append(Finding.at(node, "SLOP025", REFRESH_MESSAGE))
         self.generic_visit(node)
 
 

@@ -47,7 +47,7 @@ def test_unittest_imports(source: str) -> None:
     findings = check_patterns(ast.parse(source))
 
     # Assert
-    assert [(finding.code, finding.message) for finding in findings] == [("PY016", "use pytest instead of unittest")]
+    assert [(finding.code, finding.message) for finding in findings] == [("SLOP016", "use pytest instead of unittest")]
 
 
 @pytest.mark.parametrize("source", UNRELATED_IMPORTS)
@@ -68,7 +68,7 @@ def test_unittest_warning_locations(source_file: Path) -> None:
     source_file.write_text("import os, unittest as ut\nfrom unittest.mock import Mock, patch\n")
 
     # Act
-    warnings = [warning for warning in check_file(source_file) if warning.code == "PY016"]
+    warnings = [warning for warning in check_file(source_file) if warning.code == "SLOP016"]
 
     # Assert
     assert [(warning.line, warning.column) for warning in warnings] == [(1, 12), (2, 1)]
@@ -77,7 +77,7 @@ def test_unittest_warning_locations(source_file: Path) -> None:
 @pytest.mark.parametrize("source", RETIRED_IMPORTS)
 def test_retired_import_forms(source: str) -> None:
     """Reject absolute imports of retired wrappers and their submodules."""
-    assert codes(source) == ["PY013"]
+    assert codes(source) == ["SLOP013"]
 
 
 def test_unrelated_imports_and_http_exception_are_allowed() -> None:

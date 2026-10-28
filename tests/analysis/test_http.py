@@ -59,4 +59,4 @@ def test_default_json_response_class_still_requires_model() -> None:
     def endpoint():
         return payload
     """
-    assert codes(source) == ["PY009"]
+    assert codes(source) == ["SLOP011"]

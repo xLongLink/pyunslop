@@ -1,4 +1,4 @@
-# CM004: No suppression directives
+# SLOP004: No suppression directives
 
 Do not use bare or code-specific `noqa` directives, including file-wide
 `ruff: noqa` and `flake8: noqa` forms and case variants. Detection uses real

@@ -2,14 +2,14 @@ from __future__ import annotations
 
 import ast
 from typing import TYPE_CHECKING
-from ..diagnostics import Finding
-from ..analysis.bindings import BindingVisitor
+from pyunslop.diagnostics import Finding
+from pyunslop.analysis.bindings import BindingVisitor
 
 if TYPE_CHECKING:
-    from ..source import Source
-    from ..contracts import QualifiedName
+    from pyunslop.source import Source
+    from pyunslop.contracts import QualifiedName
 
-CODE = "PY014"
+CODE = "SLOP014"
 CLI_HELP_APIS = {"argparse.ArgumentParser", "click.command", "click.group", "typer.Typer"}
 
 

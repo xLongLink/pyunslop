@@ -32,32 +32,32 @@ DO run `uvx pyunslop` and fix any warnings
 
 | Code | Warning |
 | --- | --- |
-| [CM001](docs/cm001.md) | More than 10 complexity points without a standalone comment. |
-| [CM002](docs/cm002.md) | Missing blank line before a standalone comment block. |
-| [CM003](docs/cm003.md) | Missing space after `#` (except a bare `#` or first-line shebang). |
-| [CM004](docs/cm004.md) | Forbidden `noqa` suppression directive in a comment. |
-| [PY001](docs/py001.md) | Name asynchronous SQLAlchemy/SQLModel query results before consuming them. |
-| [PY002](docs/py002.md) | Use `Sequence[T]` for read-only query-result return types. |
-| [PY003](docs/py003.md) | Avoid redundant `list(result.all())` copies when a sequence is sufficient. |
-| [PY004](docs/py004.md) | Iterate buffered query results directly instead of iterating `result.all()`. |
-| [PY005](docs/py005.md) | Pass generators rather than single-use list comprehensions to SQLAlchemy `.in_()`. |
-| [PY006](docs/py006.md) | Name allowlisted domain-class instances before calling their methods. |
-| [PY009](docs/py009.md) | Declare FastAPI JSON endpoint response schemas explicitly. |
-| [PY010](docs/py010.md) | Return API payloads directly instead of generic success envelopes. |
-| [PY013](docs/py013.md) | Do not import retired `src.errors` wrappers. |
-| [PY014](docs/py014.md) | Reject leading module docstrings (CLI help exempt). |
-| [PY015](docs/py015.md) | Replace single literal-case pytest parametrization when it adds no fixture/collection behavior. |
-| [PY016](docs/py016.md) | Use pytest instead of unittest. |
-| [PY017](docs/py017.md) | Order Pydantic model fields from shortest name to longest within each section. |
-| [PY101](docs/py101.md) | Review response-model reconstruction when the route already declares that model. |
-| [PY106](docs/py106.md) | Use an explicit loop for dependent walrus bindings in comprehension constructor arguments. |
-| [PY107](docs/py107.md) | Review single-use list materialization for known iterable-only consumers. |
-| [PY108](docs/py108.md) | Prefer scalar query APIs for scalar-result consumption, preserving cardinality checks. |
-| [PY109](docs/py109.md) | Review rows loaded solely to check size, existence, or a threshold. |
-| [PY110](docs/py110.md) | Review transparent forwarding wrappers and subclasses with no added behavior. |
-| [PY111](docs/py111.md) | Review classes that only store and use a borrowed client. |
-| [PY113](docs/py113.md) | Review immediate post-commit ORM refreshes. |
-| [PY114](docs/py114.md) | Review inlining single-use literal constants. |
+| [SLOP001](docs/SLOP001.md) | More than 10 complexity points without a standalone comment. |
+| [SLOP002](docs/SLOP002.md) | Missing blank line before a standalone comment block. |
+| [SLOP003](docs/SLOP003.md) | Missing space after `#` (except a bare `#` or first-line shebang). |
+| [SLOP004](docs/SLOP004.md) | Forbidden `noqa` suppression directive in a comment. |
+| [SLOP005](docs/SLOP005.md) | Name asynchronous SQLAlchemy/SQLModel query results before consuming them. |
+| [SLOP006](docs/SLOP006.md) | Use `Sequence[T]` for read-only query-result return types. |
+| [SLOP007](docs/SLOP007.md) | Avoid redundant `list(result.all())` copies when a sequence is sufficient. |
+| [SLOP008](docs/SLOP008.md) | Iterate buffered query results directly instead of iterating `result.all()`. |
+| [SLOP009](docs/SLOP009.md) | Pass generators rather than single-use list comprehensions to SQLAlchemy `.in_()`. |
+| [SLOP010](docs/SLOP010.md) | Name allowlisted domain-class instances before calling their methods. |
+| [SLOP011](docs/SLOP011.md) | Declare FastAPI JSON endpoint response schemas explicitly. |
+| [SLOP012](docs/SLOP012.md) | Return API payloads directly instead of generic success envelopes. |
+| [SLOP013](docs/SLOP013.md) | Do not import retired `src.errors` wrappers. |
+| [SLOP014](docs/SLOP014.md) | Reject leading module docstrings (CLI help exempt). |
+| [SLOP015](docs/SLOP015.md) | Replace single literal-case pytest parametrization when it adds no fixture/collection behavior. |
+| [SLOP016](docs/SLOP016.md) | Use pytest instead of unittest. |
+| [SLOP017](docs/SLOP017.md) | Order Pydantic model fields from shortest name to longest within each section. |
+| [SLOP018](docs/SLOP018.md) | Review response-model reconstruction when the route already declares that model. |
+| [SLOP019](docs/SLOP019.md) | Use an explicit loop for dependent walrus bindings in comprehension constructor arguments. |
+| [SLOP020](docs/SLOP020.md) | Review single-use list materialization for known iterable-only consumers. |
+| [SLOP021](docs/SLOP021.md) | Prefer scalar query APIs for scalar-result consumption, preserving cardinality checks. |
+| [SLOP022](docs/SLOP022.md) | Review rows loaded solely to check size, existence, or a threshold. |
+| [SLOP023](docs/SLOP023.md) | Review transparent forwarding wrappers and subclasses with no added behavior. |
+| [SLOP024](docs/SLOP024.md) | Review classes that only store and use a borrowed client. |
+| [SLOP025](docs/SLOP025.md) | Review immediate post-commit ORM refreshes. |
+| [SLOP026](docs/SLOP026.md) | Review inlining single-use literal constants. |
 
 <br />
 
@@ -81,9 +81,12 @@ preview = true
 select = [
     "F", "UP", "D", "DTZ", "I", "ICN", "PIE", "RET", "ARG", "N",
     "PERF", "PTH", "A", "S", "ASYNC", "ANN", "B006", "E302", "E305",
-    "PGH003", "PT", "RUF100", "S324", "S506",
+    "PGH003", "PT", "RUF100", "S324", "S506", "TID252",
 ]
 ignore = ["D100", "D104", "D202"]
+
+[tool.ruff.lint.flake8-tidy-imports]
+ban-relative-imports = "all"
 
 [tool.ruff.lint.per-file-ignores]
 "tests/**" = ["ARG", "N803", "S"]

@@ -1,4 +1,4 @@
-# PY005: Generators for SQL membership expressions
+# SLOP009: Generators for SQL membership expressions
 
 Pass a generator rather than a single-use list comprehension to SQLAlchemy
 `.in_()`. Detection requires a recognized SQLAlchemy/SQLModel expression

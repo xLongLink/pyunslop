@@ -11,7 +11,7 @@ MEANINGFUL_WRAPPERS = (
 
 def test_private_transparent_wrapper() -> None:
     """Review exact private forwarding wrappers without added behavior."""
-    assert codes("def _fetch(value):\n    return fetch(value)\n") == ["PY110"]
+    assert codes("def _fetch(value):\n    return fetch(value)\n") == ["SLOP023"]
 
 
 @pytest.mark.parametrize("source", MEANINGFUL_WRAPPERS)
@@ -23,7 +23,7 @@ def test_public_contracts_decorators_and_transformations_are_preserved(source: s
 def test_empty_test_client_subclass() -> None:
     """Review a known test-client subclass that adds no behavior."""
     source = "from fastapi.testclient import TestClient as FastAPITestClient\nclass TestClient(FastAPITestClient):\n    pass\n"
-    assert codes(source) == ["PY110"]
+    assert codes(source) == ["SLOP023"]
 
 
 def test_framework_subclass_and_documented_boundary_are_preserved() -> None:
@@ -36,7 +36,7 @@ def test_framework_subclass_and_documented_boundary_are_preserved() -> None:
         """Public compatibility boundary."""
         pass
     '''
-    assert codes(source) == ["PY016"]
+    assert codes(source) == ["SLOP016"]
 
 
 def test_private_framework_hook_is_preserved() -> None:

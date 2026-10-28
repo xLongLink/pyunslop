@@ -1,12 +1,12 @@
-from ..source import Source
-from .queries import analyze_queries
-from .endpoints import analyze_endpoints
-from ..diagnostics import Finding
-from ..rules.pytest import check_pytest
-from ..rules.imports import check_imports
-from ..rules.pydantic import check_pydantic
-from ..rules.module_doc import check_module_doc
-from ..rules.simplifications import check_simplifications
+from pyunslop.source import Source
+from pyunslop.analysis.queries import analyze_queries
+from pyunslop.analysis.endpoints import analyze_endpoints
+from pyunslop.diagnostics import Finding
+from pyunslop.rules.pytest import check_pytest
+from pyunslop.rules.imports import check_imports
+from pyunslop.rules.pydantic import check_pydantic
+from pyunslop.rules.module_doc import check_module_doc
+from pyunslop.rules.simplifications import check_simplifications
 
 
 def check_patterns(source: Source) -> list[Finding]:

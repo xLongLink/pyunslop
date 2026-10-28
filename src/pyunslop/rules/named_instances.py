@@ -2,12 +2,12 @@ from __future__ import annotations
 
 import ast
 from typing import TYPE_CHECKING
-from ..diagnostics import Finding
+from pyunslop.diagnostics import Finding
 
 if TYPE_CHECKING:
-    from ..analysis.bindings import BindingVisitor
+    from pyunslop.analysis.bindings import BindingVisitor
 
-CODE = "PY006"
+CODE = "SLOP010"
 DOMAIN_CLASSES = {"Postgres", "Kubernetes"}
 
 

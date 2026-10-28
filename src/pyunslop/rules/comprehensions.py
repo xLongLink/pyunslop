@@ -2,14 +2,14 @@ from __future__ import annotations
 
 import ast
 from typing import TYPE_CHECKING
-from ..diagnostics import Finding
+from pyunslop.diagnostics import Finding
 from collections.abc import Sequence
 
 if TYPE_CHECKING:
-    from ..source import Source
-    from ..contracts import ComprehensionNode
+    from pyunslop.source import Source
+    from pyunslop.contracts import ComprehensionNode
 
-CODE = "PY106"
+CODE = "SLOP019"
 
 
 def argument_dependencies(arguments: Sequence[ast.expr]) -> list[ast.NamedExpr]:
@@ -33,6 +33,7 @@ def comprehension_dependencies(node: ComprehensionNode) -> list[ast.NamedExpr]:
     roots = [node.key, node.value] if isinstance(node, ast.DictComp) else [node.elt]
     findings = []
     for root in roots:
+
         # Constructor naming is deliberately conservative; ordinary calls are ignored.
         for call in (item for item in ast.walk(root) if isinstance(item, ast.Call)):
             name = call.func.id if isinstance(call.func, ast.Name) else getattr(call.func, "attr", "")

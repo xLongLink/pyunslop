@@ -1,4 +1,4 @@
-# PY004: Iterate buffered results directly
+# SLOP008: Iterate buffered results directly
 
 Iterate recognized buffered query results rather than calling `all()` solely
 for a synchronous `for` loop. Streaming results, `yield_per`, asynchronous

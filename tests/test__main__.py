@@ -10,4 +10,4 @@ def test_module_defaults_to_current_directory_and_ignores_werror(tmp_path: Path,
 
     # Assert: subprocess success must still include the expected advisory finding.
     assert result.returncode == 0, result.stderr
-    assert "warning: CM003" in result.stdout
+    assert "warning: SLOP003" in result.stdout

@@ -1,4 +1,4 @@
-# PY106: Make comprehension argument dependencies explicit
+# SLOP019: Make comprehension argument dependencies explicit
 
 Use an explicit loop when a walrus binding in one constructor argument is read
 by a later argument inside a list, set, or dictionary comprehension or generator

@@ -4,14 +4,13 @@ import ast
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from .queries import QueryAnalyzer
+    from pyunslop.analysis.queries import QueryAnalyzer
 
 SESSION_TYPES = {
     "sqlalchemy.orm.Session",
     "sqlalchemy.orm.session.Session",
     "sqlalchemy.engine.Connection",
     "sqlalchemy.engine.base.Connection",
-    # Async sessions can produce buffered or streaming results depending on the method.
     "sqlalchemy.ext.asyncio.AsyncSession",
     "sqlalchemy.ext.asyncio.session.AsyncSession",
     "sqlalchemy.ext.asyncio.AsyncConnection",

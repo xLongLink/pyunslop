@@ -1,4 +1,4 @@
-# PY010: Return endpoint payloads directly
+# SLOP012: Return endpoint payloads directly
 
 Avoid generic success envelopes in recognized FastAPI routes. Detection
 requires literal `success=True` plus `detail` or `data`, including direct

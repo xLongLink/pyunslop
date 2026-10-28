@@ -1,4 +1,4 @@
-# PY113: Review immediate post-commit refreshes
+# SLOP025: Review immediate post-commit refreshes
 
 Review an immediate commit/refresh pair on the same recognized session. This
 does not prove the refresh redundant: inspect `expire_on_commit`, server-generated

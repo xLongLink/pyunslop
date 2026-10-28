@@ -1,7 +1,7 @@
 import sys
 from pathlib import Path
-from .checker import check_file
-from .discovery import find_python_files
+from pyunslop.checker import check_file
+from pyunslop.discovery import find_python_files
 
 
 def main() -> int:
@@ -15,12 +15,14 @@ def main() -> int:
     try:
         paths = list(find_python_files([Path()]))
         for path in paths:
+
             # Emit each file's findings immediately without changing its contents.
             for warning in check_file(path):
                 print(warning)
                 count += 1
 
     except (OSError, RuntimeError) as exc:
+
         # Operational failures differ from advisory findings and must fail the command.
         print(f"Could not scan project: {exc}", file=sys.stderr)
         return 2

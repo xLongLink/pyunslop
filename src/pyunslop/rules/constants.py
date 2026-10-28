@@ -2,12 +2,12 @@ from __future__ import annotations
 
 import ast
 from typing import TYPE_CHECKING, cast
-from ..diagnostics import Finding
+from pyunslop.diagnostics import Finding
 
 if TYPE_CHECKING:
-    from ..contracts import ScopeNode
+    from pyunslop.contracts import ScopeNode
 
-CODE = "PY114"
+CODE = "SLOP026"
 
 # Each boundary can capture or shadow a name from an enclosing literal assignment.
 SCOPE_BOUNDARIES = (

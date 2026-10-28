@@ -8,7 +8,7 @@ def test_allowlisted_classes() -> None:
         usage = await Postgres(host, port).usage()
         logs = await Kubernetes(config).applications.logs(name)
     """
-    assert codes(source) == ["PY006", "PY006"]
+    assert codes(source) == ["SLOP010", "SLOP010"]
 
 
 def test_import_aliases_and_module_qualified_classes() -> None:
@@ -19,7 +19,7 @@ def test_import_aliases_and_module_qualified_classes() -> None:
     usage = Database(host).usage()
     logs = d.Kubernetes(config).applications.logs(name)
     """
-    assert codes(source) == ["PY006", "PY006"]
+    assert codes(source) == ["SLOP010", "SLOP010"]
 
 
 def test_named_instances_and_other_classes_are_allowed() -> None:
@@ -39,7 +39,7 @@ def test_allowlisted_local_class() -> None:
         pass
     usage = Postgres(host).usage()
     """
-    assert codes(source) == ["PY006"]
+    assert codes(source) == ["SLOP010"]
 
 
 def test_shadowed_alias_is_ignored() -> None:

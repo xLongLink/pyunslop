@@ -1,4 +1,4 @@
-# PY009: Explicit endpoint response schemas
+# SLOP011: Explicit endpoint response schemas
 
 Declare `response_model` explicitly for recognized FastAPI JSON endpoints,
 even when a return annotation exists. Locally constructed or annotated routers

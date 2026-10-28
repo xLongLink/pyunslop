@@ -21,7 +21,7 @@ def test_imports_are_resolved_at_their_use_sites() -> None:
             return {}
         """)
     findings = check_patterns(ast.parse(source), source)
-    assert sorted((finding.line, finding.code) for finding in findings) == [(4, "PY009"), (6, "PY003")]
+    assert sorted((finding.line, finding.code) for finding in findings) == [(4, "SLOP011"), (6, "SLOP007")]
 
 
 def test_nested_scopes_restore_domain_bindings() -> None:
@@ -34,7 +34,7 @@ def test_nested_scopes_restore_domain_bindings() -> None:
             rows = list(result.all())
             return rows
         """)
-    assert [(finding.line, finding.code) for finding in check_patterns(ast.parse(source), source)] == [(5, "PY003")]
+    assert [(finding.line, finding.code) for finding in check_patterns(ast.parse(source), source)] == [(5, "SLOP007")]
 
 
 def test_reassignments_and_parameter_shadowing_clear_provenance() -> None:

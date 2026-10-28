@@ -1,4 +1,4 @@
-# PY013: No retired error wrappers
+# SLOP013: No retired error wrappers
 
 Do not import absolute `src.errors` wrappers, their submodules, or
 `errors` through `from src import errors`. Use FastAPI's `HTTPException`

@@ -1,4 +1,4 @@
-# PY108: Prefer scalar query APIs
+# SLOP021: Prefer scalar query APIs
 
 Review known `execute(...).scalars()` consumption and one-element row unpacking
 from syntactically single-selection queries. Prefer `session.scalars()` while

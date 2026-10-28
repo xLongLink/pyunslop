@@ -5,7 +5,7 @@ from pathlib import Path
 from dataclasses import dataclass
 
 if TYPE_CHECKING:
-    from .contracts import LocatedNode
+    from pyunslop.contracts import LocatedNode
 
 
 @dataclass(frozen=True)

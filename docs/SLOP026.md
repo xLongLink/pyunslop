@@ -1,4 +1,4 @@
-# PY114: Review single-use literal constants
+# SLOP026: Review single-use literal constants
 
 Review uppercase function-local and private module constants assigned an
 immutable literal and read exactly once later in the same scope. Rebinding,

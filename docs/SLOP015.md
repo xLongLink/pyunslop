@@ -1,4 +1,4 @@
-# PY015: Simplify single-case parametrization
+# SLOP015: Simplify single-case parametrization
 
 Replace a known pytest parametrization containing exactly one literal case
 when it adds no fixture or collection behavior. Dynamic cases, `pytest.param`,

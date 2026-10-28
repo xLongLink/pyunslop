@@ -1,4 +1,4 @@
-# PY101: Review repeated response validation
+# SLOP018: Review repeated response validation
 
 Review direct `return Model.model_validate(value)` calls when all known route
 response-model contracts already name that model. Explicit validation options,

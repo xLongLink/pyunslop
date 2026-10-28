@@ -34,7 +34,7 @@ def test_success_envelope_return() -> None:
     async def users():
         return {'success': True, 'detail': 'Users fetched', 'data': users}
     """
-    assert codes(source) == ["PY010"]
+    assert codes(source) == ["SLOP012"]
 
 
 def test_named_and_dict_constructor_envelopes() -> None:
@@ -47,7 +47,7 @@ def test_named_and_dict_constructor_envelopes() -> None:
         payload = dict(success=True, data=users)
         return payload
     """
-    assert codes(source) == ["PY010"]
+    assert codes(source) == ["SLOP012"]
 
 
 def test_payloads_and_non_api_functions_are_ignored() -> None:
@@ -83,7 +83,7 @@ def test_none_schema_is_not_an_external_protocol_marker() -> None:
     def endpoint():
         return {'success': True, 'data': users}
     """
-    assert codes(source) == ["PY010"]
+    assert codes(source) == ["SLOP012"]
 
 
 def test_nested_non_route_return_is_not_an_api_return() -> None:
@@ -113,7 +113,7 @@ def test_response_model_exemptions_do_not_leak() -> None:
 
     # Assert
     assert exempt == []
-    assert [finding.code for finding in findings] == ["PY101"]
+    assert [finding.code for finding in findings] == ["SLOP018"]
 
 
 def test_raw_returns_belong_to_their_function() -> None:
@@ -135,7 +135,7 @@ def test_raw_returns_belong_to_their_function() -> None:
     findings = check_patterns(ast.parse(source))
 
     # Assert
-    assert [(finding.line, finding.code) for finding in findings] == [(6, "PY009")]
+    assert [(finding.line, finding.code) for finding in findings] == [(6, "SLOP011")]
 
 
 def test_json_endpoint_requires_explicit_schema() -> None:
@@ -147,7 +147,7 @@ def test_json_endpoint_requires_explicit_schema() -> None:
     async def users() -> list[UserResponse]:
         return fetch_users()
     """
-    assert codes(source) == ["PY009"]
+    assert codes(source) == ["SLOP011"]
 
 
 @pytest.mark.parametrize("model", ["list[UserResponse]", "None"])
@@ -190,7 +190,7 @@ def test_mixed_raw_and_json_returns_require_schema() -> None:
             return Response()
         return {'users': users}
     """
-    assert codes(source) == ["PY009"]
+    assert codes(source) == ["SLOP011"]
 
 
 def test_unrelated_router_is_ignored() -> None:
@@ -215,7 +215,7 @@ def test_repeated_response_validation() -> None:
     async def me(user):
         return Output.model_validate(user)
     """
-    assert codes(source) == ["PY101"]
+    assert codes(source) == ["SLOP018"]
 
 
 @pytest.mark.parametrize("expression", VALIDATION_EXPRESSIONS)

@@ -1,4 +1,4 @@
-# PY111: Review borrowed-client-only classes
+# SLOP024: Review borrowed-client-only classes
 
 Review plain classes whose only state is a directly borrowed client and whose
 methods only use that field. Owned clients, extra state, inheritance,

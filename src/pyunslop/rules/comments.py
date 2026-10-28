@@ -4,10 +4,10 @@ import re
 import ast
 import tokenize
 from typing import TYPE_CHECKING
-from ..diagnostics import Finding
+from pyunslop.diagnostics import Finding
 
 if TYPE_CHECKING:
-    from ..source import Source
+    from pyunslop.source import Source
 MAX_COMPLEXITY = 10
 NON_CODE_TOKENS = {tokenize.COMMENT, tokenize.ENCODING, tokenize.ENDMARKER, tokenize.INDENT, tokenize.DEDENT, tokenize.NEWLINE, tokenize.NL}
 NOQA_DIRECTIVE = re.compile(r"#\s*(?:(?:ruff|flake8)\s*:\s*)?noqa\b", re.IGNORECASE)
@@ -109,7 +109,7 @@ def check_frequency(source: Source) -> list[Finding]:
             # Headers can jump past the limit; report only the first crossing.
             if previous <= MAX_COMPLEXITY < since_comment:
                 findings.append(
-                    Finding(line_number, 1, "CM001", f"complexity budget exceeds {MAX_COMPLEXITY} points without a standalone comment")
+                    Finding(line_number, 1, "SLOP001", f"complexity budget exceeds {MAX_COMPLEXITY} points without a standalone comment")
                 )
     return findings
 
@@ -129,17 +129,11 @@ def continued_comments(source: Source) -> set[int]:
 
 
 def check_separation(source: Source) -> list[Finding]:
-    """Require separation before blocks outside suites and continuations."""
+    """Require separation before comment blocks outside continuations."""
     findings = []
     continued = continued_comments(source)
     for line_number in sorted(source.standalone_comments):
-        line = source.lines[line_number - 1]
         previous = source.lines[line_number - 2] if line_number > 1 else ""
-
-        # Comments introducing a suite need indentation, not a separating blank line.
-        starts_suite = previous.rstrip().endswith(":") and (
-            len(line.expandtabs()) - len(line.expandtabs().lstrip()) > len(previous.expandtabs()) - len(previous.expandtabs().lstrip())
-        )
 
         # Only the first comment in an ordinary block needs a preceding blank line.
         if (
@@ -147,10 +141,10 @@ def check_separation(source: Source) -> list[Finding]:
             and previous.strip()
             and line_number - 1 not in source.standalone_comments
             and line_number not in continued
-            and not starts_suite
         ):
+
             # Report only the block's opening comment.
-            findings.append(Finding(line_number, 1, "CM002", "expected a blank line before the comment block"))
+            findings.append(Finding(line_number, 1, "SLOP002", "expected a blank line before the comment block"))
     return findings
 
 
@@ -163,7 +157,7 @@ def check_spacing(source: Source) -> list[Finding]:
 
         # A bare marker is valid; other comments require one leading space.
         if not is_shebang and token.string != "#" and not token.string.startswith("# "):
-            findings.append(Finding(line, column + 1, "CM003", "expected a space after '#'"))
+            findings.append(Finding(line, column + 1, "SLOP003", "expected a space after '#'"))
     return findings
 
 
@@ -173,9 +167,10 @@ def check_suppressions(source: Source) -> list[Finding]:
     for token in source.comments:
         match = NOQA_DIRECTIVE.search(token.string)
         if match:
+
             # Match offsets are relative to the token, not the physical source line.
             line, column = token.start
-            findings.append(Finding(line, column + match.start() + 1, "CM004", "noqa suppression directives are forbidden"))
+            findings.append(Finding(line, column + match.start() + 1, "SLOP004", "noqa suppression directives are forbidden"))
     return findings
 
 

@@ -1,4 +1,4 @@
-# PY109: Review size-only row loading
+# SLOP022: Review size-only row loading
 
 Review recognized query rows materialized solely for `len`, `bool`, or truth
 testing, including local row variables whose only uses are size or truth checks.

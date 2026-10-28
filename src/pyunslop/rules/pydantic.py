@@ -2,13 +2,13 @@ from __future__ import annotations
 
 import ast
 from typing import TYPE_CHECKING
-from ..diagnostics import Finding
-from ..analysis.bindings import BindingVisitor
+from pyunslop.diagnostics import Finding
+from pyunslop.analysis.bindings import BindingVisitor
 
 if TYPE_CHECKING:
-    from ..source import Source
+    from pyunslop.source import Source
 
-CODE = "PY017"
+CODE = "SLOP017"
 MODEL_BASES = {"pydantic.BaseModel", "pydantic.main.BaseModel", "pydantic.v1.BaseModel", "pydantic.v1.main.BaseModel"}
 MESSAGE = "order model fields from shortest name to longest within each section; review validation dependencies before reordering"
 
@@ -31,6 +31,7 @@ def check_fields(node: ast.ClassDef, context: BindingVisitor) -> list[Finding]:
     findings = []
     previous: ast.AnnAssign | None = None
     for statement in node.body:
+
         # Methods, private state, and configuration terminate a field run.
         if not isinstance(statement, ast.AnnAssign) or not isinstance(statement.target, ast.Name) or not is_field(statement, context):
             previous = None

@@ -1,4 +1,4 @@
-# PY003: Avoid redundant query-row copies
+# SLOP007: Avoid redundant query-row copies
 
 Avoid `list()` around recognized query-row materialization such as `all()` or
 `fetchall()` when a sequence is sufficient. Checks cover untyped local

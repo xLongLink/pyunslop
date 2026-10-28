@@ -1,4 +1,4 @@
-# PY002: Read-only query return contracts
+# SLOP006: Read-only query return contracts
 
 Use `Sequence[T]` rather than `list[T]` or `typing.List[T]` when directly
 returning recognized query rows, including rows wrapped in `list()`. Ordinary

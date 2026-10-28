@@ -1,4 +1,4 @@
-# PY107: Review single-use list materialization
+# SLOP020: Review single-use list materialization
 
 Review simple list comprehensions consumed by built-in `sum`, `min`, `max`,
 `tuple`, `set`, or `frozenset`, including adjacent single-use temporary lists

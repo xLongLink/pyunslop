@@ -2,14 +2,14 @@ from __future__ import annotations
 
 import ast
 from typing import TYPE_CHECKING
-from ..ast_utils import name_loads
-from ..diagnostics import Finding
+from pyunslop.ast_utils import name_loads
+from pyunslop.diagnostics import Finding
 
 if TYPE_CHECKING:
-    from ..contracts import FunctionNode, QualifiedName
-    from ..analysis.bindings import BindingVisitor
+    from pyunslop.contracts import FunctionNode, QualifiedName
+    from pyunslop.analysis.bindings import BindingVisitor
 
-CODE = "PY107"
+CODE = "SLOP020"
 ITERABLE_CONSUMERS = {"sum", "min", "max", "tuple", "set", "frozenset"}
 
 
@@ -70,6 +70,7 @@ def check_call(node: ast.Call, context: BindingVisitor) -> list[Finding]:
         and not node.keywords
         and simple_comprehension(node.args[0])
     ):
+
         # Generator conversion still requires checking snapshot and exception timing.
         return [
             Finding.at(node.args[0], CODE, "review a generator for this iterable-only consumer; preserve snapshot and exception timing")

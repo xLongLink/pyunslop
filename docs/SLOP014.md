@@ -1,4 +1,4 @@
-# PY014: No leading module docstrings
+# SLOP014: No leading module docstrings
 
 This fixed repository policy rejects leading module docstrings, not function
 or class docstrings. A module is exempt when its `__doc__` explicitly supplies
