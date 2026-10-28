@@ -219,7 +219,7 @@ def test_completed_endpoint_contexts_are_released() -> None:
     analyzer = EndpointAnalyzer()
     analyzer.visit(ast.parse(source))
     assert analyzer.findings == []
-    assert analyzer.endpoints == {}
+    assert analyzer.endpoints == []
 
 
 def test_failed_nested_visit_releases_endpoint_contexts(mocker: MockerFixture) -> None:
@@ -229,7 +229,7 @@ def test_failed_nested_visit_releases_endpoint_contexts(mocker: MockerFixture) -
     tree = ast.parse("def outer():\n    def inner():\n        return value\n")
     with pytest.raises(RuntimeError, match="inspection failed"):
         analyzer.visit(tree)
-    assert analyzer.endpoints == {}
+    assert analyzer.endpoints == []
 
 
 def test_unrelated_router_is_ignored() -> None:

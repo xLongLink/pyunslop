@@ -23,7 +23,7 @@ class EndpointAnalyzer(BindingVisitor):
         """Start with independent endpoint and model state for this file."""
         super().__init__()
         self.findings: list[Finding] = []
-        self.endpoints: dict[FunctionNode, Endpoint] = {}
+        self.endpoints: list[Endpoint] = []
         self.transforming_models: set[str] = set()
 
     def annotation_kind(self, node: ast.expr | None) -> str:
@@ -59,20 +59,19 @@ class EndpointAnalyzer(BindingVisitor):
         )
 
         # Return checks need this context only while its function is active.
-        self.endpoints[node] = endpoint
+        self.endpoints.append(endpoint)
         try:
             super().visit_FunctionDef(node)
         finally:
-            del self.endpoints[node]
+            self.endpoints.pop()
 
         # Decorator options are resolved after restoring the enclosing import scope.
         if self.annotation_kind(node.returns) != "@response" and not (endpoint.saw_return and endpoint.all_returns_raw):
             for route in endpoint.routes:
-
-                # Each decorator may declare a different serialization contract.
                 if http.needs_response_model(route, self.qualified):
                     self.findings.append(Finding.at(route, "SLOP010", "declare response_model explicitly for this JSON endpoint"))
 
+    # Async routes share the same context lifetime.
     visit_AsyncFunctionDef = visit_FunctionDef
 
     def visit_ClassDef(self, node: ast.ClassDef) -> None:
@@ -93,18 +92,18 @@ class EndpointAnalyzer(BindingVisitor):
 
     def visit_Return(self, node: ast.Return) -> None:
         """Keep nested returns separate and review only recognized HTTP routes."""
-        if self.functions:
-            endpoint = self.endpoints[self.functions[-1]]
+        if self.endpoints:
+            endpoint = self.endpoints[-1]
             endpoint.saw_return = True
-            raw_return = self.kind(node.value) == "@response"
-            endpoint.all_returns_raw = endpoint.all_returns_raw and raw_return
+            return_kind = self.kind(node.value)
+            endpoint.all_returns_raw = endpoint.all_returns_raw and return_kind == "@response"
 
             # Only route returns participate in response-policy checks.
             if endpoint.routes and not any(http.is_external(route) for route in endpoint.routes):
                 self.findings.extend(self.reconstructed_response(node, endpoint))
 
                 # Disabling a schema alone does not opt out of envelope checks.
-                if node.value is not None and self.kind(node.value) == "@envelope":
+                if node.value is not None and return_kind == "@envelope":
                     self.findings.append(
                         Finding.at(node.value, "SLOP011", "return the API payload directly instead of a generic success envelope")
                     )
@@ -121,9 +120,8 @@ class EndpointAnalyzer(BindingVisitor):
         # Imported model transformations cannot be proven absent by this local check.
         model = self.qualified(value.func.value)
         if model and model not in self.transforming_models and endpoint.response_models == {model}:
-
-            # This is a review candidate, not proof that validation is redundant.
             return [
+                # Validation may still intentionally transform the payload.
                 Finding.at(
                     value,
                     "SLOP015",

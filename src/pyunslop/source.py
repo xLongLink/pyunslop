@@ -10,7 +10,6 @@ class Source:
     def __init__(self, source: str, tree: ast.Module) -> None:
         """Tokenize once and identify standalone comments shared by comment rules."""
         self.lines = source.splitlines()
-        self.text = source
         self.tree = tree
         self.tokens = list(tokenize.generate_tokens(io.StringIO(source).readline))
         self.comments = [token for token in self.tokens if token.type == tokenize.COMMENT]

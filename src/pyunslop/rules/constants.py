@@ -80,7 +80,18 @@ def single_use_constants(scope: ScopeNode) -> list[Finding]:
         return []
 
     # Nested scopes can capture or shadow an otherwise single use.
-    nested = [child for node in nodes if node is not scope and isinstance(node, SCOPE_BOUNDARIES) for child in ast.walk(node)]
+    nested: list[ast.AST] = []
+    pending = list(ast.iter_child_nodes(scope))
+    while pending:
+        node = pending.pop()
+
+        # A boundary's walk includes deeper scopes; do not expand them separately.
+        if isinstance(node, SCOPE_BOUNDARIES):
+            nested.extend(ast.walk(node))
+        else:
+            pending.extend(ast.iter_child_nodes(node))
+
+    # Check assignments against both complete references and nested-scope mentions.
     findings: list[Finding] = []
     for statement in scope.body:
         target = constant_target(statement, isinstance(scope, ast.Module))

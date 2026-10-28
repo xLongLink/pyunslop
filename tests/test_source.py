@@ -8,7 +8,7 @@ def test_source_encoding_is_respected(tmp_path: Path) -> None:
     path = tmp_path / "encoded.py"
     path.write_bytes(b'# coding: latin-1\nname = "caf\xe9"\n')
     facts = Source.read(path)
-    assert facts.text == '# coding: latin-1\nname = "café"\n'
+    assert facts.lines == ["# coding: latin-1", 'name = "café"']
     assert isinstance(facts.tree.body[0].value, ast.Constant)
     assert facts.tree.body[0].value.value == "café"
 

@@ -1,5 +1,6 @@
 import ast
 from tests.support import codes, check_patterns
+from pyunslop.rules.comprehensions import argument_dependencies
 
 
 def test_deduplication_is_local_to_one_analysis() -> None:
@@ -39,3 +40,19 @@ def test_independent_binding_and_non_comprehension_are_allowed() -> None:
 def test_generator_constructor_dependency() -> None:
     """Apply constructor-dependency checks to generator expressions too."""
     assert codes("rows = (Audit(first=(value := source(item)), second=value) for item in items)") == ["SLOP016"]
+
+
+def test_argument_dependencies_preserve_binding_order() -> None:
+    """Keep positional and keyword bindings in their original AST order."""
+    call = ast.parse("Row(((first := item), (second := item)), third=(third := item), last=(first, second, third))", mode="eval").body
+    assert isinstance(call, ast.Call)
+    arguments = [*call.args, *(keyword.value for keyword in call.keywords)]
+    expected = [node for argument in arguments for node in ast.walk(argument) if isinstance(node, ast.NamedExpr)]
+    assert argument_dependencies(arguments) == expected
+
+
+def test_same_argument_reads_are_not_dependencies() -> None:
+    """Only reads in a later argument can make a binding dependent."""
+    call = ast.parse("Row(((value := item), value), other=item)", mode="eval").body
+    assert isinstance(call, ast.Call)
+    assert argument_dependencies([*call.args, *(keyword.value for keyword in call.keywords)]) == []

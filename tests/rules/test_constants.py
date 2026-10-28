@@ -144,6 +144,22 @@ def test_module_constant_closures_are_preserved() -> None:
     assert codes("_VALUE = 30\ndef run():\n    return _VALUE\n") == []
 
 
+def test_deep_nested_capture_preserves_only_captured_constant() -> None:
+    """Keep a deeply captured constant without excluding unrelated candidates."""
+    source = """
+    def outer():
+        CAPTURED = 30
+        SINGLE = 40
+        def middle():
+            def inner():
+                return [CAPTURED for item in items]
+            return inner
+        return SINGLE, middle
+    """
+    findings = check_patterns(ast.parse(textwrap.dedent(source)))
+    assert [(finding.code, finding.line, finding.column) for finding in findings] == [("SLOP023", 4, 5)]
+
+
 @pytest.mark.parametrize("call", ["locals()", "globals()", "vars()", 'eval("VALUE")', 'exec("VALUE = 40")'])
 def test_dynamic_namespace_access_is_preserved(call: str) -> None:
     """Namespace introspection can observe otherwise invisible uses."""

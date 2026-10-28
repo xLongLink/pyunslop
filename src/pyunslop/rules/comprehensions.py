@@ -2,8 +2,8 @@ from __future__ import annotations
 
 import ast
 from typing import TYPE_CHECKING
-from pyunslop.diagnostics import Finding
 from collections.abc import Sequence
+from pyunslop.diagnostics import Finding
 
 if TYPE_CHECKING:
     from pyunslop.source import Source
@@ -14,29 +14,30 @@ CODE = "SLOP016"
 
 def argument_dependencies(arguments: Sequence[ast.expr]) -> list[ast.NamedExpr]:
     """Find bindings reused by a later constructor argument."""
-    findings: list[ast.NamedExpr] = []
-    for index, argument in enumerate(arguments):
-        bindings = [node for node in ast.walk(argument) if isinstance(node, ast.NamedExpr)]
-        later = [node for value in arguments[index + 1 :] for node in ast.walk(value)]
+    groups: list[list[ast.NamedExpr]] = []
+    later_names: set[str] = set()
+    for argument in reversed(arguments):
+        nodes = list(ast.walk(argument))
+        bindings = [node for node in nodes if isinstance(node, ast.NamedExpr)]
+        names = {node.id for node in nodes if isinstance(node, ast.Name) and isinstance(node.ctx, ast.Load)}
 
-        # Only later arguments can consume the newly assigned constructor value.
-        findings.extend(
-            binding
-            for binding in bindings
-            if any(isinstance(node, ast.Name) and isinstance(node.ctx, ast.Load) and node.id == binding.target.id for node in later)
-        )
-    return findings
+        # Same-argument reads must not count as later-argument dependencies.
+        groups.append([binding for binding in bindings if binding.target.id in later_names])
+        later_names.update(names)
+    return [binding for group in reversed(groups) for binding in group]
 
 
 def comprehension_dependencies(node: ComprehensionNode) -> list[ast.NamedExpr]:
     """Inspect constructor calls inside comprehension output expressions."""
     roots = [node.key, node.value] if isinstance(node, ast.DictComp) else [node.elt]
     findings = []
-    for root in roots:
 
-        # Constructor naming is deliberately conservative; ordinary calls are ignored.
+    # Constructor naming is deliberately conservative; ordinary calls are ignored.
+    for root in roots:
         for call in (item for item in ast.walk(root) if isinstance(item, ast.Call)):
             name = call.func.id if isinstance(call.func, ast.Name) else getattr(call.func, "attr", "")
+
+            # Leading underscores do not change constructor recognition.
             if not name.lstrip("_")[:1].isupper():
                 continue
 
