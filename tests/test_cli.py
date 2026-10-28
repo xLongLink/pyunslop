@@ -10,7 +10,6 @@ from collections.abc import Callable
 def run_cli(tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]) -> Callable[..., tuple[int, str, str]]:
     """Run the native CLI in an isolated project and capture both output streams."""
     monkeypatch.chdir(tmp_path)
-    monkeypatch.setattr("pyunslop.cli.check_ruff", lambda paths: [])
 
     def run(*arguments: str) -> tuple[int, str, str]:
         monkeypatch.setattr(sys, "argv", ["pyunslop", *arguments])
@@ -30,6 +29,18 @@ def test_warnings_exit_successfully_without_modifying_source(source_file: Path, 
     assert "warning: CM003" in stdout
     assert "warning: CM001" in stdout
     assert "2 warning(s)" in stderr
+    assert source_file.read_text() == source
+
+
+def test_cli_does_not_run_external_checks(
+    source_file: Path, run_cli: Callable[..., tuple[int, str, str]], mocker: MockerFixture
+) -> None:
+    """Leave unused imports and formatting to separately installed tools."""
+    source = "import os\nvalue=1\n"
+    source_file.write_text(source)
+    run = mocker.patch("subprocess.run", side_effect=AssertionError("External checker invoked"))
+    assert run_cli() == (0, "Checks passed.\n", "")
+    run.assert_not_called()
     assert source_file.read_text() == source
 
 

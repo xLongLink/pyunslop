@@ -1,7 +1,6 @@
 # pyunslop
 
 A Python code checker for humans and coding agents. Requires Python 3.10 or newer.
-Ruff is installed automatically as a pinned dependency.
 
 ```
 uvx pyunslop
@@ -40,30 +39,37 @@ From this checkout with uv:
 | [PY111](docs/py111.md) | Review classes that only store and use a borrowed client. |
 | [PY113](docs/py113.md) | Review immediate post-commit ORM refreshes. |
 | [PY114](docs/py114.md) | Review inlining single-use literal constants. |
-| [RFMT001](docs/rfmt001.md) | Source does not match the fixed Ruff formatter preset. |
-| [F](https://docs.astral.sh/ruff/rules/#pyflakes-f) | Pyflakes: unused imports, undefined names, and other correctness checks. |
-| [UP](https://docs.astral.sh/ruff/rules/#pyupgrade-up) | pyupgrade: modern Python syntax and APIs. |
-| [D](https://docs.astral.sh/ruff/rules/#pydocstyle-d) | pydocstyle: docstring presence and conventions. |
-| [DTZ](https://docs.astral.sh/ruff/rules/#flake8-datetimez-dtz) | flake8-datetimez: timezone-aware datetime usage. |
-| [I](https://docs.astral.sh/ruff/rules/#isort-i) | isort: import sorting and formatting. |
-| [ICN](https://docs.astral.sh/ruff/rules/#flake8-import-conventions-icn) | flake8-import-conventions: conventional import aliases. |
-| [PIE](https://docs.astral.sh/ruff/rules/#flake8-pie-pie) | flake8-pie: unnecessary or redundant code. |
-| [RET](https://docs.astral.sh/ruff/rules/#flake8-return-ret) | flake8-return: return-statement consistency and simplification. |
-| [ARG](https://docs.astral.sh/ruff/rules/#flake8-unused-arguments-arg) | flake8-unused-arguments: unused function and method arguments. |
-| [N](https://docs.astral.sh/ruff/rules/#pep8-naming-n) | pep8-naming: Python naming conventions. |
-| [PERF](https://docs.astral.sh/ruff/rules/#perflint-perf) | Perflint: common performance pitfalls. |
-| [PTH](https://docs.astral.sh/ruff/rules/#flake8-use-pathlib-pth) | flake8-use-pathlib: prefer pathlib APIs. |
-| [A](https://docs.astral.sh/ruff/rules/#flake8-builtins-a) | flake8-builtins: names shadowing Python builtins. |
-| [S](https://docs.astral.sh/ruff/rules/#flake8-bandit-s) | flake8-bandit: potential security issues. |
-| [ASYNC](https://docs.astral.sh/ruff/rules/#flake8-async-async) | flake8-async: asynchronous code pitfalls. |
-| [ANN](https://docs.astral.sh/ruff/rules/#flake8-annotations-ann) | Require argument and return annotations, including avoiding explicit `Any` (ANN401). |
-| [B006](https://docs.astral.sh/ruff/rules/mutable-argument-default/) | Avoid mutable default argument values. |
-| [E302](https://docs.astral.sh/ruff/rules/blank-lines-top-level/) | Require the expected blank lines before definitions. |
-| [E305](https://docs.astral.sh/ruff/rules/blank-lines-after-function-or-class/) | Require the expected blank lines after definitions. |
-| [PGH003](https://docs.astral.sh/ruff/rules/blanket-type-ignore/) | Require specific codes in type-ignore comments. |
-| [PT](https://docs.astral.sh/ruff/rules/#flake8-pytest-style-pt) | flake8-pytest-style: pytest conventions and test simplification. |
-| [RUF100](https://docs.astral.sh/ruff/rules/unused-noqa/) | Remove unused `noqa` directives. |
-| [S324](https://docs.astral.sh/ruff/rules/hashlib-insecure-hash-function/) | Review insecure hash functions. |
-| [S506](https://docs.astral.sh/ruff/rules/unsafe-yaml-load/) | Avoid unsafe YAML loading. |
 
+## Suggested Ruff configurations
 
+Install Ruff separately and add these settings to your `pyproject.toml`.
+Run `ruff check` and `ruff format --check` separately; pyunslop does not run Ruff.
+
+```toml
+[tool.ruff]
+line-length = 140
+target-version = "py310"
+
+[tool.ruff.format]
+skip-magic-trailing-comma = true
+
+[tool.ruff.lint]
+preview = true
+select = [
+    "F", "UP", "D", "DTZ", "I", "ICN", "PIE", "RET", "ARG", "N",
+    "PERF", "PTH", "A", "S", "ASYNC", "ANN", "B006", "E302", "E305",
+    "PGH003", "PT", "RUF100", "S324", "S506",
+]
+ignore = ["D100", "D104", "D202"]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**" = ["ARG", "N803", "S"]
+
+[tool.ruff.lint.isort]
+no-sections = true
+length-sort = true
+split-on-trailing-comma = false
+
+[tool.ruff.lint.pep8-naming]
+extend-ignore-names = ["visit_*"]
+```

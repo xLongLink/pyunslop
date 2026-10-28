@@ -1,5 +1,4 @@
 import sys
-from .ruff import check_ruff
 from pathlib import Path
 from .checker import check_file
 from .discovery import find_python_files
@@ -20,10 +19,6 @@ def main() -> int:
                 print(warning)
                 count += 1
 
-        # Ruff receives the same files, rather than discovering a different project set.
-        for warning in check_ruff(paths):
-            print(warning)
-            count += 1
     except (OSError, RuntimeError) as exc:
         print(f"Could not scan project: {exc}", file=sys.stderr)
         return 2

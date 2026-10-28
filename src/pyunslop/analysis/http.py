@@ -14,6 +14,7 @@ RAW_RESPONSE_NAMES = {
     "StreamingResponse",
     "RedirectResponse",
     "FileResponse",
+    # Text and JSON response objects also bypass response-model serialization.
     "PlainTextResponse",
     "HTMLResponse",
     "JSONResponse",

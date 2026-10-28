@@ -32,7 +32,6 @@ pyunslop/
         pydantic.py         # Model field ordering
         simplifications.py  # Syntax-only review checks
         ...                 # Focused structural/comprehension helpers
-    ruff.py                 # External Ruff lint/format integration
 ```
 
 
@@ -44,4 +43,3 @@ git fetch origin main
 git tag vX.Y.Z origin/main
 git push origin vX.Y.Z
 ```
-
