@@ -1,0 +1,46 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "pyunslop"
+version = "0.1.0"
+description = "Warning-only Python code checks for humans and coding agents"
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = ["ruff==0.17.3"]
+keywords = ["lint", "comments", "agents", "python"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Programming Language :: Python :: 3",
+    "Topic :: Software Development :: Quality Assurance",
+]
+
+[project.scripts]
+pyunslop = "pyunslop.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+pyunslop = ["ruff.toml"]
+
+[tool.ruff]
+line-length = 140
+target-version = "py312"
+
+[tool.ruff.format]
+skip-magic-trailing-comma = true
+
+[tool.ruff.lint]
+preview = true
+select = ["F", "UP", "D", "DTZ", "I", "ICN", "PIE", "RET", "ARG", "N", "PERF", "PTH", "A", "S", "ASYNC", "ANN401", "B006", "E302", "E305", "PGH003", "PT", "RUF100", "S324", "S506"]
+ignore = ["D100", "D104", "D202"]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**" = ["ARG", "N803", "S"]
+
+[tool.ruff.lint.isort]
+no-sections = true
+length-sort = true
+split-on-trailing-comma = false

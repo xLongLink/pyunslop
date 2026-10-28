@@ -1,0 +1,18 @@
+line-length = 140
+target-version = "py312"
+
+[format]
+skip-magic-trailing-comma = true
+
+[lint]
+preview = true
+select = ["F", "UP", "D", "DTZ", "I", "ICN", "PIE", "RET", "ARG", "N", "PERF", "PTH", "A", "S", "ASYNC", "ANN401", "B006", "E302", "E305", "PGH003", "PT", "RUF100", "S324", "S506"]
+ignore = ["D100", "D104", "D202"]
+
+[lint.per-file-ignores]
+"tests/**" = ["ARG", "N803", "S"]
+
+[lint.isort]
+no-sections = true
+length-sort = true
+split-on-trailing-comma = false
