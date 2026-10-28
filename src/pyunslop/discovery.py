@@ -10,7 +10,6 @@ EXCLUDED_DIRS = {
     ".ruff_cache",
     ".tox",
     ".venv",
-    # Build outputs and installed dependencies are not project source.
     "__pycache__",
     "build",
     "dist",

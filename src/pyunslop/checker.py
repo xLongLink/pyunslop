@@ -10,7 +10,7 @@ def check_file(path: Path) -> list[CheckWarning]:
     """Return fixed-preset warnings without editing files or raising findings.
 
     Unreadable or invalid source is skipped. All rules are enabled, with a fixed
-    ten-line comment limit. Function definitions and standalone comments reset CM001.
+    ten-point complexity budget. Function definitions and standalone comments reset CM001.
     """
     try:
         facts = Source.read(path)

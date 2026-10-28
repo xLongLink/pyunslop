@@ -4,8 +4,6 @@
 
 <h3>Keep Python code clear, for humans and coding agents</h3>
 
-Find unnecessary complexity and enforce focused code conventions. <br />
-pyunslop reports warnings without modifying your code or failing your build. Requires Python 3.10 or newer.
 
 [![Tests](https://github.com/xLongLink/pyunslop/actions/workflows/tests.yml/badge.svg)](https://github.com/xLongLink/pyunslop/actions/workflows/tests.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
@@ -14,18 +12,21 @@ pyunslop reports warnings without modifying your code or failing your build. Req
 
 </div>
 
+<br />
+
+Run to flag the issues, ask you agent to fix them:
+
 ```
 uvx pyunslop
 ```
 
-From this checkout with uv:
-
+<br />
 
 ## Rules
 
 | Code | Warning |
 | --- | --- |
-| [CM001](docs/cm001.md) | More than 10 non-import code lines without a standalone comment. |
+| [CM001](docs/cm001.md) | More than 10 complexity points without a standalone comment. |
 | [CM002](docs/cm002.md) | Missing blank line before a standalone comment block. |
 | [CM003](docs/cm003.md) | Missing space after `#` (except a bare `#` or first-line shebang). |
 | [CM004](docs/cm004.md) | Forbidden `noqa` suppression directive in a comment. |
@@ -52,7 +53,11 @@ From this checkout with uv:
 | [PY113](docs/py113.md) | Review immediate post-commit ORM refreshes. |
 | [PY114](docs/py114.md) | Review inlining single-use literal constants. |
 
+<br />
+
 ## Suggested Ruff configurations
+
+The rules complement an exising ruff configuration, this is our suggestion:
 
 Install Ruff separately and add these settings to your `pyproject.toml`.
 Run `ruff check` and `ruff format --check` separately; pyunslop does not run Ruff.

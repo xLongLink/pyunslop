@@ -1,6 +1,9 @@
+import ast
+import sys
 import pytest
 from pyunslop import Warning as CheckWarning
 from collections.abc import Callable
+from pyunslop.rules.comments import control_weights
 
 MULTILINE_STRINGS = (
     'text = """first\n' + "second\n" * 15 + 'third"""\n',
@@ -22,8 +25,94 @@ SUPPRESSION_DIRECTIVES = (
 
 
 def test_frequency_reports_once_per_run_at_threshold(check_source: Callable[[str], list[CheckWarning]]) -> None:
-    """Report the first line beyond the fixed ten-line limit."""
+    """Report the first line beyond the fixed ten-point budget."""
     warnings = check_source("a = 1\n" * 13)
+    assert [(w.code, w.line) for w in warnings] == [("CM001", 11)]
+
+
+@pytest.mark.parametrize(
+    ("opening", "item", "closing"), [("[", "1,", "]"), ("(", "-1,", ")"), ("{", "'name',", "}"), ("{", "'name': [1, (-2, None)],", "}")]
+)
+def test_literal_containers_cost_one_point(
+    check_source: Callable[[str], list[CheckWarning]], opening: str, item: str, closing: str
+) -> None:
+    """Ignore data layout while retaining the container's initial point."""
+    source = f"VALUES = {opening}\n" + f"    {item}\n" * 15 + closing + "\n"
+    assert check_source(source + "work()\n" * 9) == []
+    warnings = check_source(source + "work()\n" * 10)
+    assert [(w.code, w.line) for w in warnings] == [("CM001", 27)]
+
+
+@pytest.mark.parametrize("item", ["load(),", "value,", "1 + 2,", "*items,", "f'{value}',"])
+def test_executable_collections_are_not_collapsed(check_source: Callable[[str], list[CheckWarning]], item: str) -> None:
+    """Do not hide runtime expressions inside collection syntax."""
+    warnings = check_source("VALUES = [\n" + f"    {item}\n" * 12 + "]\n")
+    assert [(w.code, w.line) for w in warnings] == [("CM001", 11)]
+
+
+@pytest.mark.parametrize("expression", ["[\n    item\n    for item in items\n]", "{\n    **mapping,\n}"])
+def test_comprehensions_and_dict_unpacking_still_count(check_source: Callable[[str], list[CheckWarning]], expression: str) -> None:
+    """Retain every executable continuation line."""
+    warnings = check_source("work()\n" * 9 + f"VALUES = {expression}\n")
+    assert [(w.code, w.line) for w in warnings] == [("CM001", 11)]
+
+
+def test_literal_end_line_keeps_executable_tokens(check_source: Callable[[str], list[CheckWarning]]) -> None:
+    """Honor token boundaries, including non-ASCII AST column offsets."""
+    source = "work()\n" * 9 + "é = [\n    1,\n]; work()\n"
+    warnings = check_source(source)
+    assert [(w.code, w.line) for w in warnings] == [("CM001", 12)]
+
+
+@pytest.mark.parametrize("header", ["if ready:", "for item in items:", "while ready:", "with resource:"])
+def test_control_headers_cost_two_points(check_source: Callable[[str], list[CheckWarning]], header: str) -> None:
+    """Warn when a header jumps from nine points to eleven."""
+    warnings = check_source("work()\n" * 9 + header + "\n    work()\n")
+    assert [(w.code, w.line) for w in warnings] == [("CM001", 10)]
+
+
+def test_nesting_weights_only_control_headers(check_source: Callable[[str], list[CheckWarning]]) -> None:
+    """Charge two for the loop, three for the branch, and one per call."""
+    source = "for item in items:\n    if item.enabled:\n" + "        work()\n" * 6
+    warnings = check_source(source)
+    assert [(w.code, w.line) for w in warnings] == [("CM001", 8)]
+
+
+@pytest.mark.parametrize(
+    ("source", "expected"),
+    [
+        ("try:\n    work()\nexcept Error:\n    recover()\n", {1: 2, 3: 3}),
+        ("match item:\n    case 1:\n        work()\n    case _:\n        pass\n", {1: 2, 2: 3, 4: 3}),
+        ("async def run():\n    async with resource:\n        async for item in items:\n            pass\n", {2: 2, 3: 3}),
+        ("for a in items:\n    while ready:\n        if enabled:\n            work()\n", {1: 2, 2: 3, 3: 4}),
+        ("if first:\n    pass\nelif second:\n    pass\n", {1: 2, 3: 3}),
+        ("if ready: work()\n", {1: 2}),
+    ],
+)
+def test_control_header_weights(source: str, expected: dict[int, int]) -> None:
+    """Cover branching, async headers, sibling cases, and deeper nesting."""
+    assert control_weights(ast.parse(source)) == expected
+
+
+@pytest.mark.skipif(sys.version_info < (3, 11), reason="except* requires Python 3.11")
+def test_exception_group_headers() -> None:
+    """Apply the same weights to exception-group handlers."""
+    assert control_weights(ast.parse("try:\n    work()\nexcept* Error:\n    recover()\n")) == {1: 2, 3: 3}
+
+
+@pytest.mark.parametrize("header", ["def run():", "async def run():"])
+def test_nested_functions_do_not_inherit_control_depth(check_source: Callable[[str], list[CheckWarning]], header: str) -> None:
+    """Reset the budget and nesting when entering a nested function."""
+    source = "if outer:\n    " + header + "\n        if inner:\n" + "            work()\n" * 7
+    assert check_source(source) == []
+    warnings = check_source(source + "            work()\n")
+    assert [(w.code, w.line) for w in warnings] == [("CM001", 11)]
+
+
+def test_comment_resets_points_but_not_control_depth(check_source: Callable[[str], list[CheckWarning]]) -> None:
+    """Retain nesting after an explanation resets the accumulated budget."""
+    source = "for item in items:\n    # Explain this branch.\n    if ready:\n" + "        work()\n" * 8
+    warnings = check_source(source)
     assert [(w.code, w.line) for w in warnings] == [("CM001", 11)]
 
 

@@ -8,41 +8,93 @@ from ..diagnostics import Finding
 
 if TYPE_CHECKING:
     from ..source import Source
-MAX_CODE_LINES = 10
+MAX_COMPLEXITY = 10
 NON_CODE_TOKENS = {tokenize.COMMENT, tokenize.ENCODING, tokenize.ENDMARKER, tokenize.INDENT, tokenize.DEDENT, tokenize.NEWLINE, tokenize.NL}
 NOQA_DIRECTIVE = re.compile(r"#\s*(?:(?:ruff|flake8)\s*:\s*)?noqa\b", re.IGNORECASE)
+CONTROL_HEADERS = {"If", "For", "AsyncFor", "While", "Try", "TryStar", "ExceptHandler", "With", "AsyncWith", "Match", "match_case"}
+
+
+def is_literal_container(node: ast.AST) -> bool:
+    """Recognize data containers without calls, unpacking, or computations."""
+    if isinstance(node, ast.Dict):
+        return all(key is not None and is_literal_value(key) for key in node.keys) and all(is_literal_value(value) for value in node.values)
+    return isinstance(node, (ast.List, ast.Tuple, ast.Set)) and all(is_literal_value(item) for item in node.elts)
+
+
+def is_literal_value(node: ast.AST) -> bool:
+    """Include signed numbers and nested literal containers."""
+    if isinstance(node, ast.Constant):
+        return True
+    if isinstance(node, ast.UnaryOp) and isinstance(node.op, (ast.UAdd, ast.USub)):
+        return isinstance(node.operand, ast.Constant) and type(node.operand.value) in (int, float, complex)
+    return is_literal_container(node)
 
 
 def counted_lines(source: Source) -> tuple[set[int], set[int]]:
-    """Exclude imports and string continuations, and locate function resets."""
-    function_starts: set[int] = set()
+    """Collapse literal data, exclude imports, and locate function resets."""
+    function_starts = {node.lineno for node in ast.walk(source.tree) if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef))}
     import_lines: set[int] = set()
     string_continuations: set[int] = set()
+    literal_spans = []
+
+    # Collect source exclusions separately from token-level counting.
     for node in ast.walk(source.tree):
-        if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
-            function_starts.add(node.lineno)
-        elif isinstance(node, (ast.Import, ast.ImportFrom)):
+        if isinstance(node, (ast.Import, ast.ImportFrom)):
             import_lines.update(range(node.lineno, (node.end_lineno or node.lineno) + 1))
 
         # Adjacent literals share one AST node across their physical source lines.
         elif isinstance(node, ast.Constant) and isinstance(node.value, (str, bytes)):
             string_continuations.update(range(node.lineno + 1, (node.end_lineno or node.lineno) + 1))
 
+        # Keep the opening token, but exclude the rest of each literal's span.
+        elif is_literal_container(node):
+            literal_spans.append(((node.lineno, node.col_offset), (node.end_lineno, node.end_col_offset)))
+
+    # AST columns are UTF-8 byte offsets; tokenize columns count characters.
+    def inside_literal(token: tokenize.TokenInfo) -> bool:
+        line, column = token.start
+        position = (line, len(source.lines[line - 1][:column].encode("utf-8")))
+        return any(start < position < end for start, end in literal_spans)
+
+    # Executable suffixes on a literal's closing line must still count.
     code_lines = {
         token.start[0]
         for token in source.tokens
         if token.type not in NON_CODE_TOKENS
         and token.start[0] not in import_lines
         and not (token.type == tokenize.STRING and token.start[0] in string_continuations)
+        and not inside_literal(token)
     }
     return function_starts, code_lines
 
 
+def control_weights(node: ast.AST, depth: int = 0) -> dict[int, int]:
+    """Weight control-flow headers, resetting nesting at function boundaries."""
+    weights: dict[int, int] = {}
+    if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef, ast.Lambda)):
+        depth = 0
+
+    # Case nodes carry their source location on the pattern.
+    elif type(node).__name__ in CONTROL_HEADERS:
+        line = node.pattern.lineno if isinstance(node, ast.match_case) else node.lineno
+        weights[line] = 2 + depth
+        depth += 1
+
+    # Multiple headers on one physical line retain the largest weight.
+    for child in ast.iter_child_nodes(node):
+        for line, weight in control_weights(child, depth).items():
+            weights[line] = max(weights.get(line, 0), weight)
+    return weights
+
+
 def check_frequency(source: Source) -> list[Finding]:
-    """Report the first line over the fixed limit in each uncommented run."""
+    """Report the first line exceeding the fixed uncommented complexity budget."""
     findings = []
     since_comment = 0
     function_starts, code_lines = counted_lines(source)
+    weights = control_weights(source.tree)
+
+    # A reset clears accumulated points, not the structural nesting weights.
     for line_number in range(1, len(source.lines) + 1):
         if line_number in function_starts:
             since_comment = 0
@@ -51,9 +103,14 @@ def check_frequency(source: Source) -> list[Finding]:
 
         # Blank lines and inline comments do not reset an uncommented run.
         elif line_number in code_lines:
-            since_comment += 1
-            if since_comment == MAX_CODE_LINES + 1:
-                findings.append(Finding(line_number, 1, "CM001", f"more than {MAX_CODE_LINES} code lines without a standalone comment"))
+            previous = since_comment
+            since_comment += weights.get(line_number, 1)
+
+            # Headers can jump past the limit; report only the first crossing.
+            if previous <= MAX_COMPLEXITY < since_comment:
+                findings.append(
+                    Finding(line_number, 1, "CM001", f"complexity budget exceeds {MAX_COMPLEXITY} points without a standalone comment")
+                )
     return findings
 
 
