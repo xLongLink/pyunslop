@@ -8,7 +8,7 @@ from pyunslop.analysis.bindings import BindingVisitor
 if TYPE_CHECKING:
     from pyunslop.source import Source
 
-CODE = "SLOP017"
+CODE = "SLOP015"
 MODEL_BASES = {"pydantic.BaseModel", "pydantic.main.BaseModel", "pydantic.v1.BaseModel", "pydantic.v1.main.BaseModel"}
 MESSAGE = "order model fields from shortest name to longest within each section; review validation dependencies before reordering"
 

@@ -1,25 +1,20 @@
-# SLOP024: Review borrowed-client-only classes
+# SLOP024: Review single-use literal constants
 
-Review plain classes whose only state is a directly borrowed client and whose
-methods only use that field. Owned clients, extra state, inheritance,
-decorators, documented boundaries, properties, and lifecycle hooks are skipped.
-Namespaced functions may be simpler, but preserve meaningful ownership or API
-boundaries. The example assumes the class adds no intentional boundary.
+Review uppercase function-local and private module constants assigned an
+immutable literal and read exactly once later in the same scope. Rebinding,
+nested-scope or comprehension references, annotations, mutable or computed
+values, class constants, public module names, explicit exports, and recognized
+dynamic namespace access are skipped. Preserve names that explain units,
+domain meaning, or boundaries. A warning does not prove that inlining improves
+readability or preserves identity; the example assumes the name adds no meaning.
 
 ```py
 # Bad
-class Users:
-    def __init__(self, client):
-        self.client = client
-
-    def fetch(self):
-        return self.client.fetch_users()
-
-users = Users(client).fetch()
+def render():
+    LABEL = "Ready"
+    return format_label(LABEL)
 
 # Good
-def fetch_users(client):
-    return client.fetch_users()
-
-users = fetch_users(client)
+def render():
+    return format_label("Ready")
 ```

@@ -29,5 +29,5 @@ def test_all_syntax_rule_families_are_included_without_rewriting() -> None:
     findings = check_simplifications(Source(source, tree))
 
     # Assert
-    assert sorted(finding.code for finding in findings) == ["SLOP010", "SLOP019", "SLOP020", "SLOP023", "SLOP024", "SLOP026"]
+    assert sorted(finding.code for finding in findings) == ["SLOP010", "SLOP017", "SLOP018", "SLOP021", "SLOP022", "SLOP024"]
     assert ast.dump(tree) == before

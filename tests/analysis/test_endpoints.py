@@ -113,7 +113,7 @@ def test_response_model_exemptions_do_not_leak() -> None:
 
     # Assert
     assert exempt == []
-    assert [finding.code for finding in findings] == ["SLOP018"]
+    assert [finding.code for finding in findings] == ["SLOP016"]
 
 
 def test_raw_returns_belong_to_their_function() -> None:
@@ -215,7 +215,7 @@ def test_repeated_response_validation() -> None:
     async def me(user):
         return Output.model_validate(user)
     """
-    assert codes(source) == ["SLOP018"]
+    assert codes(source) == ["SLOP016"]
 
 
 @pytest.mark.parametrize("expression", VALIDATION_EXPRESSIONS)

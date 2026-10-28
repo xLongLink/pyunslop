@@ -13,7 +13,7 @@ EAGER_EXPRESSIONS = ("sum([load(x) for x in xs])", "any([item.flag for item in i
 
 def test_direct_iterable_consumer() -> None:
     """Review a list comprehension consumed directly by a known iterable API."""
-    assert codes("total = sum([invoice.amount for invoice in invoices])") == ["SLOP020"]
+    assert codes("total = sum([invoice.amount for invoice in invoices])") == ["SLOP018"]
 
 
 def test_adjacent_single_use_temporary() -> None:
@@ -23,7 +23,7 @@ def test_adjacent_single_use_temporary() -> None:
         amounts = [invoice.amount for invoice in invoices]
         return sum(amounts)
     """
-    assert codes(source) == ["SLOP020"]
+    assert codes(source) == ["SLOP018"]
 
 
 @pytest.mark.parametrize("body", SNAPSHOT_CONSUMERS)

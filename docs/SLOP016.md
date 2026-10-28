@@ -1,0 +1,30 @@
+# SLOP016: Review repeated response validation
+
+Review direct `return Model.model_validate(value)` calls when all known route
+response-model contracts already name that model. Explicit validation options,
+computed inputs, external protocols, and locally visible validators or custom
+initialization are exempt. Imported validators cannot be inspected. This is a
+review candidate, not proof that reconstruction is redundant; the good example
+assumes validation performs no intentional transformation beyond the route contract.
+
+```py
+# Bad
+from fastapi import APIRouter
+from schemas import UserResponse
+
+router = APIRouter()
+
+@router.get("/user", response_model=UserResponse)
+def get_user():
+    return UserResponse.model_validate(user)
+
+# Good
+from fastapi import APIRouter
+from schemas import UserResponse
+
+router = APIRouter()
+
+@router.get("/user", response_model=UserResponse)
+def get_user():
+    return user
+```

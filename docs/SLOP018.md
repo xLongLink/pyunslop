@@ -1,30 +1,16 @@
-# SLOP018: Review repeated response validation
+# SLOP018: Review single-use list materialization
 
-Review direct `return Model.model_validate(value)` calls when all known route
-response-model contracts already name that model. Explicit validation options,
-computed inputs, external protocols, and locally visible validators or custom
-initialization are exempt. Imported validators cannot be inspected. This is a
-review candidate, not proof that reconstruction is redundant; the good example
-assumes validation performs no intentional transformation beyond the route contract.
+Review simple list comprehensions consumed by built-in `sum`, `min`, `max`,
+`tuple`, `set`, or `frozenset`, including adjacent single-use temporary lists
+inside functions. Unknown consumers, short-circuiting `any`/`all`, visible
+calls or awaits, asynchronous comprehensions, filters, and reused snapshots are
+skipped. Properties may still have effects: preserve snapshot semantics and
+exception timing. The example uses already available numeric values.
 
 ```py
 # Bad
-from fastapi import APIRouter
-from schemas import UserResponse
-
-router = APIRouter()
-
-@router.get("/user", response_model=UserResponse)
-def get_user():
-    return UserResponse.model_validate(user)
+total = sum([value * 2 for value in values])
 
 # Good
-from fastapi import APIRouter
-from schemas import UserResponse
-
-router = APIRouter()
-
-@router.get("/user", response_model=UserResponse)
-def get_user():
-    return user
+total = sum(value * 2 for value in values)
 ```

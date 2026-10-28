@@ -27,14 +27,14 @@ def test_module_exemptions_do_not_leak() -> None:
 
     # Assert
     assert before == after == []
-    assert [finding.code for finding in findings] == ["SLOP015"]
+    assert [finding.code for finding in findings] == ["SLOP014"]
 
 
 @pytest.mark.parametrize("values", ['["acme"]', '[("acme", 1)]', '("acme",)'])
 def test_single_literal_case(values: str) -> None:
     """Flag one literal case in list and tuple parametrization forms."""
     source = f'import pytest\n@pytest.mark.parametrize("name", {values})\ndef test_name(name):\n    assert name\n'
-    assert codes(source) == ["SLOP015"]
+    assert codes(source) == ["SLOP014"]
 
 
 def test_keyword_case_and_mark_alias() -> None:
@@ -45,7 +45,7 @@ def test_keyword_case_and_mark_alias() -> None:
     def test_name(name):
         assert name
     """
-    assert codes(source) == ["SLOP015"]
+    assert codes(source) == ["SLOP014"]
 
 
 @pytest.mark.parametrize("arguments", COLLECTION_OPTIONS)

@@ -44,18 +44,18 @@ DO run `uvx pyunslop` and fix any warnings
 | [SLOP010](docs/SLOP010.md) | Name allowlisted domain-class instances before calling their methods. |
 | [SLOP011](docs/SLOP011.md) | Declare FastAPI JSON endpoint response schemas explicitly. |
 | [SLOP012](docs/SLOP012.md) | Return API payloads directly instead of generic success envelopes. |
-| [SLOP014](docs/SLOP014.md) | Reject leading module docstrings (CLI help exempt). |
-| [SLOP015](docs/SLOP015.md) | Replace single literal-case pytest parametrization when it adds no fixture/collection behavior. |
-| [SLOP017](docs/SLOP017.md) | Order Pydantic model fields from shortest name to longest within each section. |
-| [SLOP018](docs/SLOP018.md) | Review response-model reconstruction when the route already declares that model. |
-| [SLOP019](docs/SLOP019.md) | Use an explicit loop for dependent walrus bindings in comprehension constructor arguments. |
-| [SLOP020](docs/SLOP020.md) | Review single-use list materialization for known iterable-only consumers. |
-| [SLOP021](docs/SLOP021.md) | Prefer scalar query APIs for scalar-result consumption, preserving cardinality checks. |
-| [SLOP022](docs/SLOP022.md) | Review rows loaded solely to check size, existence, or a threshold. |
-| [SLOP023](docs/SLOP023.md) | Review transparent forwarding wrappers and subclasses with no added behavior. |
-| [SLOP024](docs/SLOP024.md) | Review classes that only store and use a borrowed client. |
-| [SLOP025](docs/SLOP025.md) | Review immediate post-commit ORM refreshes. |
-| [SLOP026](docs/SLOP026.md) | Review inlining single-use literal constants. |
+| [SLOP013](docs/SLOP013.md) | Reject leading module docstrings (CLI help exempt). |
+| [SLOP014](docs/SLOP014.md) | Replace single literal-case pytest parametrization when it adds no fixture/collection behavior. |
+| [SLOP015](docs/SLOP015.md) | Order Pydantic model fields from shortest name to longest within each section. |
+| [SLOP016](docs/SLOP016.md) | Review response-model reconstruction when the route already declares that model. |
+| [SLOP017](docs/SLOP017.md) | Use an explicit loop for dependent walrus bindings in comprehension constructor arguments. |
+| [SLOP018](docs/SLOP018.md) | Review single-use list materialization for known iterable-only consumers. |
+| [SLOP019](docs/SLOP019.md) | Prefer scalar query APIs for scalar-result consumption, preserving cardinality checks. |
+| [SLOP020](docs/SLOP020.md) | Review rows loaded solely to check size, existence, or a threshold. |
+| [SLOP021](docs/SLOP021.md) | Review transparent forwarding wrappers and subclasses with no added behavior. |
+| [SLOP022](docs/SLOP022.md) | Review classes that only store and use a borrowed client. |
+| [SLOP023](docs/SLOP023.md) | Review immediate post-commit ORM refreshes. |
+| [SLOP024](docs/SLOP024.md) | Review inlining single-use literal constants. |
 
 <br />
 

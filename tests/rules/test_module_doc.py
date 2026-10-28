@@ -16,7 +16,7 @@ def test_module_exemptions_do_not_leak() -> None:
 
     # Assert
     assert before == after == []
-    assert [finding.code for finding in findings] == ["SLOP014"]
+    assert [finding.code for finding in findings] == ["SLOP013"]
 
 
 def test_module_docstring_only() -> None:
@@ -37,4 +37,4 @@ def test_cli_help_exemption() -> None:
 def test_merely_referencing_doc_is_not_cli_help() -> None:
     """Require a recognized CLI-help use rather than any reference to __doc__."""
     source = '"""Module docs."""\nprint(__doc__)\n'
-    assert codes(source) == ["SLOP014"]
+    assert codes(source) == ["SLOP013"]

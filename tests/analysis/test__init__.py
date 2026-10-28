@@ -32,7 +32,7 @@ def test_domains_are_independent_on_the_same_tree() -> None:
 
 def test_policies_are_always_enabled() -> None:
     """Enable the module-docstring policy without requiring configuration."""
-    assert codes('"""Module docs."""\n') == ["SLOP014"]
+    assert codes('"""Module docs."""\n') == ["SLOP013"]
 
 
 @pytest.mark.parametrize(

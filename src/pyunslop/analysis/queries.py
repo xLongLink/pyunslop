@@ -102,7 +102,7 @@ class QueryAnalyzer(BindingVisitor):
             and self.kind(node.iter) == "@single_execute_result"
         ):
             self.findings.append(
-                Finding.at(node.target, "SLOP021", "use session.scalars() for this single-column query; preserve cardinality checks")
+                Finding.at(node.target, "SLOP019", "use session.scalars() for this single-column query; preserve cardinality checks")
             )
 
         # Bind loop targets only after checking the incoming query provenance.
@@ -127,7 +127,7 @@ class QueryAnalyzer(BindingVisitor):
                 # Keep the one/first consumer's cardinality requirement in the warning.
                 self.findings.append(
                     Finding.at(
-                        target, "SLOP021", "use session.scalars() for single-column row unpacking; preserve the existing cardinality check"
+                        target, "SLOP019", "use session.scalars() for single-column row unpacking; preserve the existing cardinality check"
                     )
                 )
 
@@ -174,7 +174,7 @@ class QueryAnalyzer(BindingVisitor):
             and node.func.attr == "scalars"
             and self.kind(node.func.value) in query_types.EXECUTE_RESULTS
         ):
-            self.findings.append(Finding.at(node, "SLOP021", SCALAR_API_MESSAGE))
+            self.findings.append(Finding.at(node, "SLOP019", SCALAR_API_MESSAGE))
         self.findings.extend(self.size_only_load(node, parent))
         self.generic_visit(node)
 
@@ -208,7 +208,7 @@ class QueryAnalyzer(BindingVisitor):
         if candidate:
             return [
                 Finding.at(
-                    node, "SLOP022", "review an existence or bounded query instead of loading rows solely for size/truth; preserve locking"
+                    node, "SLOP020", "review an existence or bounded query instead of loading rows solely for size/truth; preserve locking"
                 )
             ]
         return []
@@ -227,7 +227,7 @@ class QueryAnalyzer(BindingVisitor):
                 index = statements.index(node)
                 commit = called_method(statements[index - 1]) if index else None
                 if commit and commit.attr == "commit" and ast.dump(commit.value) == ast.dump(refresh.value):
-                    self.findings.append(Finding.at(node, "SLOP025", REFRESH_MESSAGE))
+                    self.findings.append(Finding.at(node, "SLOP023", REFRESH_MESSAGE))
         self.generic_visit(node)
 
 

@@ -116,7 +116,7 @@ class EndpointAnalyzer(BindingVisitor):
             return [
                 Finding.at(
                     value,
-                    "SLOP018",
+                    "SLOP016",
                     "route already validates this response model; avoid reconstruction unless validation intentionally transforms it",
                 )
             ]

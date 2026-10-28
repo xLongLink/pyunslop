@@ -1,25 +1,18 @@
-# SLOP017: Order model fields by name length
+# SLOP017: Make comprehension argument dependencies explicit
 
-Within each blank-line-separated section of a directly recognized Pydantic
-`BaseModel`, order annotated fields from shortest name to longest. Equal-length
-names have no required order. Non-field statements, private attributes,
-`model_config`, and recognized `ClassVar` annotations separate runs. Indirect
-custom bases are not inferred. This is a style-policy warning, not an automatic
-reorder: review validation dependencies, default factories, and serialization
-order before changing fields. The example uses independent fields.
+Use an explicit loop when a walrus binding in one constructor argument is read
+by a later argument inside a list, set, or dictionary comprehension or generator
+expression. Constructors are recognized conservatively by capitalized names.
+Independent bindings are unaffected. Preserve evaluation order and review
+comprehension scope when moving bindings into a loop.
 
 ```py
 # Bad
-from pydantic import BaseModel
-
-class UserResponse(BaseModel):
-    description: str
-    id: int
+rows = [Row(value=(value := item.value), doubled=value * 2) for item in items]
 
 # Good
-from pydantic import BaseModel
-
-class UserResponse(BaseModel):
-    id: int
-    description: str
+rows = []
+for item in items:
+    value = item.value
+    rows.append(Row(value=value, doubled=value * 2))
 ```

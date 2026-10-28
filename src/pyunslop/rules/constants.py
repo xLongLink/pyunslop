@@ -7,7 +7,7 @@ from pyunslop.diagnostics import Finding
 if TYPE_CHECKING:
     from pyunslop.contracts import ScopeNode
 
-CODE = "SLOP026"
+CODE = "SLOP024"
 
 # Each boundary can capture or shadow a name from an enclosing literal assignment.
 SCOPE_BOUNDARIES = (

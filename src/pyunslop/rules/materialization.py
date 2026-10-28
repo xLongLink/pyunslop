@@ -9,7 +9,7 @@ if TYPE_CHECKING:
     from pyunslop.contracts import FunctionNode, QualifiedName
     from pyunslop.analysis.bindings import BindingVisitor
 
-CODE = "SLOP020"
+CODE = "SLOP018"
 ITERABLE_CONSUMERS = {"sum", "min", "max", "tuple", "set", "frozenset"}
 
 

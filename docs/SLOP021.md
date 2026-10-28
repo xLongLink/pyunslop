@@ -1,23 +1,19 @@
-# SLOP021: Prefer scalar query APIs
+# SLOP021: Review transparent wrappers
 
-Review known `execute(...).scalars()` consumption and one-element row unpacking
-from syntactically single-selection queries. Prefer `session.scalars()` while
-preserving the original `one`, `one_or_none`, or other cardinality and null
-handling. Multi-column unpacking and unknown selection shapes are not simplified.
-This is a review candidate, not an automatic query rewrite.
+Review exact private positional forwarding functions and private empty
+subclasses, plus empty FastAPI/Starlette test-client subclasses. Public
+functions, typed or documented contracts, decorators, inherited framework
+methods, and subclasses adding behavior are exempt. Preserve meaningful
+compatibility, lifecycle, or framework boundaries. Only remove a wrapper after
+checking its callers; the example assumes no such boundary is needed.
 
 ```py
 # Bad
-from sqlalchemy.ext.asyncio import AsyncSession
+def _fetch(value):
+    return fetch(value)
 
-async def fetch(session: AsyncSession):
-    result = await session.execute(statement)
-    return result.scalars().one_or_none()
+result = _fetch(value)
 
 # Good
-from sqlalchemy.ext.asyncio import AsyncSession
-
-async def fetch(session: AsyncSession):
-    result = await session.scalars(statement)
-    return result.one_or_none()
+result = fetch(value)
 ```

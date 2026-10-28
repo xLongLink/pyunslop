@@ -141,7 +141,7 @@ def test_scalar_api_preserves_cardinality() -> None:
         result = await s.execute(stmt)
         return result.scalars().one_or_none()
     """
-    assert codes(source) == ["SLOP021"]
+    assert codes(source) == ["SLOP019"]
 
 
 def test_single_column_unpacking() -> None:
@@ -154,7 +154,7 @@ def test_single_column_unpacking() -> None:
         for user, in result:
             consume(user)
     """
-    assert codes(source) == ["SLOP021"]
+    assert codes(source) == ["SLOP019"]
 
 
 def test_single_row_unpacking() -> None:
@@ -166,7 +166,7 @@ def test_single_row_unpacking() -> None:
         result = await s.execute(select(User))
         user, = result.one()
     """
-    assert codes(source) == ["SLOP021"]
+    assert codes(source) == ["SLOP019"]
 
 
 def test_multi_column_unpacking_is_preserved() -> None:
@@ -186,7 +186,7 @@ def test_multi_column_unpacking_is_preserved() -> None:
 def test_direct_existence_or_threshold_materialization(expression: str) -> None:
     """Review rows loaded directly for truth or threshold comparisons."""
     source = f"from sqlalchemy.ext.asyncio import AsyncSession\nasync def exists(s: AsyncSession):\n    result = await s.scalars(stmt)\n    return {expression}\n"
-    assert codes(source) == ["SLOP022"]
+    assert codes(source) == ["SLOP020"]
 
 
 def test_named_size_only_materialization() -> None:
@@ -198,7 +198,7 @@ def test_named_size_only_materialization() -> None:
         rows = result.all()
         return len(rows) >= threshold
     """
-    assert codes(source) == ["SLOP022"]
+    assert codes(source) == ["SLOP020"]
 
 
 def test_rows_used_as_data_are_preserved() -> None:
@@ -224,7 +224,7 @@ def test_immediate_refresh_candidate() -> None:
         await s.refresh(item)
         return item
     """
-    assert codes(source) == ["SLOP025"]
+    assert codes(source) == ["SLOP023"]
 
 
 def test_different_sessions_and_intervening_work_are_preserved() -> None:
@@ -262,7 +262,7 @@ def test_deduplication_is_local_to_one_analysis() -> None:
 def test_slop005_query_methods_and_consumers(chain: str, method: str) -> None:
     """Detect unnamed results across query APIs and consuming method chains."""
     source = f"async def fetch(s: AsyncSession):\n    return (await s.{method}(stmt)).{chain}\n"
-    expected = ["SLOP021", "SLOP005"] if method == "execute" and chain == "scalars().all()" else ["SLOP005"]
+    expected = ["SLOP019", "SLOP005"] if method == "execute" and chain == "scalars().all()" else ["SLOP005"]
     assert query_codes(source) == expected
 
 
@@ -291,7 +291,7 @@ def test_slop006_typing_list_alias_and_string_annotation() -> None:
         result = await s.execute(stmt)
         return list(result.scalars().all())
     """
-    assert query_codes(source) == ["SLOP006", "SLOP021"]
+    assert query_codes(source) == ["SLOP006", "SLOP019"]
 
 
 def test_slop006_reports_once_per_function() -> None:

@@ -3,7 +3,7 @@ from __future__ import annotations
 import ast
 from pyunslop.diagnostics import Finding
 
-CODE = "SLOP024"
+CODE = "SLOP022"
 
 
 def borrowed_client_class(node: ast.ClassDef) -> bool:

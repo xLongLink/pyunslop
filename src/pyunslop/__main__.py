@@ -15,12 +15,14 @@ def main() -> int:
     try:
         paths = list(find_python_files([Path()]))
         for path in paths:
+
             # Emit each file's findings immediately without changing its contents.
             for warning in check_file(path):
                 print(warning)
                 count += 1
 
     except (OSError, RuntimeError) as exc:
+
         # Operational failures differ from advisory findings and must fail the command.
         print(f"Could not scan project: {exc}", file=sys.stderr)
         return 2

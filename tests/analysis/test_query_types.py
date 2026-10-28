@@ -31,7 +31,7 @@ def test_session_factory_context_manager() -> None:
         async with sessions() as session:
             return (await session.execute(stmt)).scalars().all()
     """
-    assert query_codes(source) == ["SLOP021", "SLOP005"]
+    assert query_codes(source) == ["SLOP019", "SLOP005"]
 
 
 def test_typed_result_parameter() -> None:

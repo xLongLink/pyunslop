@@ -63,7 +63,7 @@ def test_model_field_order_is_warning_only(source_file: Path, run_cli: Callable[
     source_file.write_text(source)
     result, stdout, stderr = run_cli()
     assert (result, stderr) == (0, "Found 1 warning(s).\n")
-    assert "example.py:4:5: warning: SLOP017" in stdout
+    assert "example.py:4:5: warning: SLOP015" in stdout
     assert source_file.read_text() == source
 
 
@@ -169,7 +169,7 @@ def test_repository_policy_is_always_enabled_and_warning_only(source_file: Path,
     source_file.write_text('"""Module docs."""\n')
     result, stdout, _ = run_cli()
     assert result == 0
-    assert "warning: SLOP014" in stdout
+    assert "warning: SLOP013" in stdout
 
 
 def test_review_candidates_are_warning_only(source_file: Path, run_cli: Callable[..., tuple[int, str, str]]) -> None:
@@ -189,15 +189,15 @@ def test_review_candidates_are_warning_only(source_file: Path, run_cli: Callable
     )
     result, stdout, _ = run_cli()
     assert result == 0
-    for code in ("SLOP020", "SLOP021", "SLOP022", "SLOP025"):
+    for code in ("SLOP018", "SLOP019", "SLOP020", "SLOP023"):
         assert f"warning: {code}" in stdout
 
 
 def test_single_use_constant_is_warning_only(source_file: Path, run_cli: Callable[..., tuple[int, str, str]]) -> None:
-    """Report SLOP026 without changing source or failing the command."""
+    """Report SLOP024 without changing source or failing the command."""
     source = "_TIMEOUT = 30\nconnect(timeout=_TIMEOUT)\n"
     source_file.write_text(source)
     result, stdout, _ = run_cli()
     assert result == 0
-    assert "warning: SLOP026" in stdout
+    assert "warning: SLOP024" in stdout
     assert source_file.read_text() == source

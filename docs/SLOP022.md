@@ -1,25 +1,25 @@
-# SLOP022: Review size-only row loading
+# SLOP022: Review borrowed-client-only classes
 
-Review recognized query rows materialized solely for `len`, `bool`, or truth
-testing, including local row variables whose only uses are size or truth checks.
-Consider an existence or bounded query, but preserve locking, transaction
-behavior, and threshold semantics. The checker does not rewrite SQL. The good
-example assumes no row-locking or row-loading side effects are required.
+Review plain classes whose only state is a directly borrowed client and whose
+methods only use that field. Owned clients, extra state, inheritance,
+decorators, documented boundaries, properties, and lifecycle hooks are skipped.
+Namespaced functions may be simpler, but preserve meaningful ownership or API
+boundaries. The example assumes the class adds no intentional boundary.
 
 ```py
 # Bad
-from sqlalchemy import select
-from sqlalchemy.ext.asyncio import AsyncSession
+class Users:
+    def __init__(self, client):
+        self.client = client
 
-async def has_users(session: AsyncSession):
-    result = await session.execute(select(User))
-    return bool(result.all())
+    def fetch(self):
+        return self.client.fetch_users()
+
+users = Users(client).fetch()
 
 # Good
-from sqlalchemy import select
-from sqlalchemy.ext.asyncio import AsyncSession
+def fetch_users(client):
+    return client.fetch_users()
 
-async def has_users(session: AsyncSession):
-    statement = select(select(User.id).exists())
-    return bool(await session.scalar(statement))
+users = fetch_users(client)
 ```

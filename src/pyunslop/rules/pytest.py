@@ -9,7 +9,7 @@ if TYPE_CHECKING:
     from pyunslop.source import Source
     from pyunslop.contracts import FunctionNode, QualifiedName
 
-CODE = "SLOP015"
+CODE = "SLOP014"
 
 
 def single_literal_case(decorator: ast.expr, qualified: QualifiedName) -> bool:

@@ -1,18 +1,23 @@
-# SLOP019: Make comprehension argument dependencies explicit
+# SLOP019: Prefer scalar query APIs
 
-Use an explicit loop when a walrus binding in one constructor argument is read
-by a later argument inside a list, set, or dictionary comprehension or generator
-expression. Constructors are recognized conservatively by capitalized names.
-Independent bindings are unaffected. Preserve evaluation order and review
-comprehension scope when moving bindings into a loop.
+Review known `execute(...).scalars()` consumption and one-element row unpacking
+from syntactically single-selection queries. Prefer `session.scalars()` while
+preserving the original `one`, `one_or_none`, or other cardinality and null
+handling. Multi-column unpacking and unknown selection shapes are not simplified.
+This is a review candidate, not an automatic query rewrite.
 
 ```py
 # Bad
-rows = [Row(value=(value := item.value), doubled=value * 2) for item in items]
+from sqlalchemy.ext.asyncio import AsyncSession
+
+async def fetch(session: AsyncSession):
+    result = await session.execute(statement)
+    return result.scalars().one_or_none()
 
 # Good
-rows = []
-for item in items:
-    value = item.value
-    rows.append(Row(value=value, doubled=value * 2))
+from sqlalchemy.ext.asyncio import AsyncSession
+
+async def fetch(session: AsyncSession):
+    result = await session.scalars(statement)
+    return result.one_or_none()
 ```

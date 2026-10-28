@@ -1,19 +1,22 @@
-# SLOP023: Review transparent wrappers
+# SLOP023: Review immediate post-commit refreshes
 
-Review exact private positional forwarding functions and private empty
-subclasses, plus empty FastAPI/Starlette test-client subclasses. Public
-functions, typed or documented contracts, decorators, inherited framework
-methods, and subclasses adding behavior are exempt. Preserve meaningful
-compatibility, lifecycle, or framework boundaries. Only remove a wrapper after
-checking its callers; the example assumes no such boundary is needed.
+Review an immediate commit/refresh pair on the same recognized session. This
+does not prove the refresh redundant: inspect `expire_on_commit`, server-generated
+defaults, and required relationships before removing it. Other sessions and
+intervening work are not candidates. The good example applies only when no
+refreshed state is required.
 
 ```py
 # Bad
-def _fetch(value):
-    return fetch(value)
+from sqlalchemy.ext.asyncio import AsyncSession
 
-result = _fetch(value)
+async def save(session: AsyncSession, user):
+    await session.commit()
+    await session.refresh(user)
 
 # Good
-result = fetch(value)
+from sqlalchemy.ext.asyncio import AsyncSession
+
+async def save(session: AsyncSession, user):
+    await session.commit()
 ```
