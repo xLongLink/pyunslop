@@ -16,7 +16,6 @@ RAW_RESPONSE_NAMES = {
     "FileResponse",
     "PlainTextResponse",
     "HTMLResponse",
-    # Direct JSONResponse objects bypass serialization, unlike the default response class.
     "JSONResponse",
     "ORJSONResponse",
     "UJSONResponse",

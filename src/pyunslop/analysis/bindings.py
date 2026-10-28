@@ -6,7 +6,7 @@ from dataclasses import dataclass
 Value = TypeVar("Value")
 
 
-def merge(left: dict[str, Value], right: dict[str, Value], unknown: Value) -> dict[str, Value]:  # noqa: UP047 - Python 3.10 compatibility
+def merge(left: dict[str, Value], right: dict[str, Value], unknown: Value) -> dict[str, Value]:
     """Retain only bindings common to both possible execution paths."""
     return {name: left[name] if name in left and left[name] == right.get(name) else unknown for name in left.keys() | right.keys()}
 
@@ -106,7 +106,7 @@ class BindingVisitor(ast.NodeVisitor):
             self.bindings, self.contracts = outer, contracts
         self.bindings[node.name] = Binding()
 
-    visit_AsyncFunctionDef = visit_FunctionDef  # noqa: N815
+    visit_AsyncFunctionDef = visit_FunctionDef
 
     def bind(self, target: ast.expr | None, value: str) -> None:
         """Bind simple values and clear unknown unpacked targets."""
@@ -158,7 +158,7 @@ class BindingVisitor(ast.NodeVisitor):
         for statement in node.orelse:
             self.visit(statement)
 
-    visit_AsyncFor = visit_For  # noqa: N815
+    visit_AsyncFor = visit_For
 
     def visit_ClassDef(self, node: ast.ClassDef) -> None:
         """Prevent class-local bindings from leaking into adjacent definitions."""
@@ -177,4 +177,4 @@ class BindingVisitor(ast.NodeVisitor):
         for statement in node.body:
             self.visit(statement)
 
-    visit_AsyncWith = visit_With  # noqa: N815
+    visit_AsyncWith = visit_With

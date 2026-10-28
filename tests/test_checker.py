@@ -75,6 +75,42 @@ class CheckerTests(unittest.TestCase):
         assert [(w.code, w.line, w.column) for w in warnings] == [("CM003", 3, 8), ("CM003", 5, 1)]
         assert ":3:8: warning: CM003 " in str(warnings[0])
 
+    def test_noqa_directive_variants(self) -> None:
+        """Reject inline, blanket, code-specific, and file-wide suppressions."""
+        for directive in (
+            "# noqa",
+            "#noqa: F401",
+            "# NoQa: F401, F841",
+            "# noqa: CM004",
+            # File-wide forms are also forbidden inside inline comment tokens.
+            "# ruff: noqa",
+            "# flake8: noqa: F401",
+            "# RUFF:noqa: F401",
+            "#\tnoqa",
+        ):
+            with self.subTest(directive=directive):
+                findings = [warning for warning in self.check(f"value = 1  {directive}\n") if warning.code == "CM004"]
+                assert [(warning.line, warning.column) for warning in findings] == [(1, 12)]
+                assert findings[0].message == "noqa suppression directives are forbidden"
+
+    def test_noqa_locations_inside_comments(self) -> None:
+        """Locate the directive itself after indentation or explanatory text."""
+        source = "if ready:\n    value = 1  # explanation # noqa: F401\n"
+        warnings = self.check(source)
+        assert [(warning.code, warning.line, warning.column) for warning in warnings] == [("CM004", 2, 30)]
+
+    def test_noqa_strings_and_ordinary_comments_are_ignored(self) -> None:
+        """Do not treat string examples, prose, or longer words as directives."""
+        source = (
+            'text = "# noqa: F401"\ntext = """# ruff: noqa\n# flake8: noqa"""\n\n# Explain noqa conventions.\n# noqaish\n# ruff: noqaish\n'
+        )
+        assert self.check(source) == []
+
+    def test_noqa_cannot_hide_native_findings(self) -> None:
+        """A suppression must not hide itself or another native policy warning."""
+        warnings = self.check("from src.errors import ConflictError  # noqa: PY013, CM004\n")
+        assert {warning.code for warning in warnings} == {"PY013", "CM004"}
+
     def test_hashes_in_strings_are_not_comments(self) -> None:
         """Distinguish hash characters in strings from comment tokens."""
         assert self.check('text = "#not a comment"\n') == []

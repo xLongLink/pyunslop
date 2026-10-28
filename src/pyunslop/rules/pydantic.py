@@ -52,7 +52,7 @@ class ModelAnalyzer(BindingVisitor):
         super().__init__(source.text)
         self.findings: list[Finding] = []
 
-    def visit_ClassDef(self, node: ast.ClassDef) -> None:  # noqa: N802
+    def visit_ClassDef(self, node: ast.ClassDef) -> None:
         """Review fields before class-local bindings shadow module imports."""
         self.findings.extend(check_fields(node, self))
         super().visit_ClassDef(node)

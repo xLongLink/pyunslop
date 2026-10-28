@@ -48,6 +48,7 @@ example.py:12:1: warning: CM001 more than 10 code lines without a standalone com
 | CM001 | More than 10 non-import code lines without a standalone comment. |
 | CM002 | Missing blank line before a standalone comment block. |
 | CM003 | Missing space after `#` (except a bare `#` or first-line shebang). |
+| CM004 | Forbidden `noqa` suppression directive in a comment. |
 | PY001 | Name asynchronous SQLAlchemy/SQLModel query results before consuming them. |
 | PY002 | Use `Sequence[T]` for read-only query-result return types. |
 | PY003 | Avoid redundant `list(result.all())` copies when a sequence is sufficient. |
@@ -136,6 +137,17 @@ Both Ruff lint and format checks are read-only and use the same discovered Pytho
 files as the native checks. Project-local Ruff settings cannot disable or change
 this preset. No formatter, auto-fix, or cache writes are performed. Formatter
 findings use `RFMT001` and do not make the command fail.
+
+Suppression directives are not allowed: CM004 reports bare or code-specific
+`# noqa` comments and file-wide `# ruff: noqa` / `# flake8: noqa` directives,
+including case variants. Only actual comment tokens are inspected, so string
+examples are ignored. Ruff lint runs with `--ignore-noqa`, so suppressed Ruff
+findings remain visible. Native checks never honor suppressions either,
+including directives targeting CM004 itself. Remove the directive and fix the
+issue where appropriate; keep legitimate findings visible rather than
+replacing suppressions with configuration exclusions or code workarounds.
+The public `Warning` name and required AST visitor method names are retained
+even when Ruff reports naming warnings. All findings remain advisory.
 
 ## Native comment checks and exit status
 
@@ -419,6 +431,24 @@ format checks are read-only; findings are returned as warnings rather than raise
 python -m pip install -e .
 python -m unittest discover -s tests -v
 ```
+
+## Release
+
+Configure a PyPI Trusted Publisher for `pyunslop` with this GitHub repository,
+workflow filename `release.yml`, and environment name `pypi`. Create the matching
+`pypi` environment in the repository's GitHub settings. No API token is needed.
+
+Tag the desired commit on `main` and push the tag:
+
+```bash
+git fetch origin main
+git tag vX.Y.Z origin/main
+git push origin vX.Y.Z
+```
+
+The release workflow tests and builds the package, then publishes it to PyPI.
+The package version is taken from the tag (`v1.2.3` publishes version `1.2.3`);
+the version in `pyproject.toml` does not need to be changed before tagging.
 
 ## Architecture
 

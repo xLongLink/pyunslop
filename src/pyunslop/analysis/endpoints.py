@@ -50,7 +50,7 @@ class EndpointAnalyzer(BindingVisitor):
             and self.kind(decorator.func.value) == "@router"
         ]
 
-    def visit_FunctionDef(self, node: FunctionNode) -> None:  # noqa: N802
+    def visit_FunctionDef(self, node: FunctionNode) -> None:
         """Resolve decorator contracts before entering parameter-local scope."""
         routes = self.routes_for(node)
         endpoint = Endpoint(
@@ -65,9 +65,9 @@ class EndpointAnalyzer(BindingVisitor):
                 if http.needs_response_model(route, self.qualified):
                     self.findings.append(Finding.at(route, "PY009", "declare response_model explicitly for this JSON endpoint"))
 
-    visit_AsyncFunctionDef = visit_FunctionDef  # noqa: N815
+    visit_AsyncFunctionDef = visit_FunctionDef
 
-    def visit_ClassDef(self, node: ast.ClassDef) -> None:  # noqa: N802
+    def visit_ClassDef(self, node: ast.ClassDef) -> None:
         """Preserve visible response-model validators and initialization hooks."""
         for method in node.body:
             if not isinstance(method, (ast.FunctionDef, ast.AsyncFunctionDef)):
@@ -83,7 +83,7 @@ class EndpointAnalyzer(BindingVisitor):
                 self.transforming_models.add(node.name)
         super().visit_ClassDef(node)
 
-    def visit_Return(self, node: ast.Return) -> None:  # noqa: N802
+    def visit_Return(self, node: ast.Return) -> None:
         """Keep nested returns separate and review only recognized HTTP routes."""
         if self.functions:
             endpoint = self.endpoints[self.functions[-1]]

@@ -47,7 +47,7 @@ class ParametrizationAnalyzer(BindingVisitor):
             for item in source.tree.body
         )
 
-    def visit_FunctionDef(self, node: FunctionNode) -> None:  # noqa: N802
+    def visit_FunctionDef(self, node: FunctionNode) -> None:
         """Review single-case parametrization without fixture or collection behavior."""
         args = [*node.args.posonlyargs, *node.args.args, *node.args.kwonlyargs]
         if not self.collection_hooks and not any(argument.arg == "request" for argument in args):
@@ -56,7 +56,7 @@ class ParametrizationAnalyzer(BindingVisitor):
                     self.findings.append(Finding.at(decorator, CODE, "replace single literal-case parametrization with a direct test"))
         super().visit_FunctionDef(node)
 
-    visit_AsyncFunctionDef = visit_FunctionDef  # noqa: N815
+    visit_AsyncFunctionDef = visit_FunctionDef
 
 
 def check_pytest(source: Source) -> list[Finding]:

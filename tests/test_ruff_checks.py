@@ -69,6 +69,24 @@ class RuffTests(unittest.TestCase):
         assert any(warning.code == "F401" for warning in check_ruff([path]))
         assert path.read_text() == "import os\n"
 
+    def test_noqa_cannot_hide_ruff_findings(self) -> None:
+        """Ignore inline and file-wide suppressions when running the fixed preset."""
+        for source in ("import os  # noqa\n", "import os  # noqa: F401\n", "# ruff: noqa\nimport os\n", "# flake8: noqa\nimport os\n"):
+            with self.subTest(source=source):
+                path = self.write("example.py", source)
+                assert "F401" in {warning.code for warning in check_ruff([path])}
+                assert path.read_text() == source
+
+    def test_noqa_and_underlying_warning_are_advisory(self) -> None:
+        """Report the directive and hidden violation together without editing files."""
+        source = "import os  # noqa: F401\n"
+        path = self.write("example.py", source)
+        result = subprocess.run([sys.executable, "-m", "pyunslop"], capture_output=True, text=True, check=False)
+        assert result.returncode == 0, result.stderr
+        assert "warning: CM004" in result.stdout
+        assert "warning: F401" in result.stdout
+        assert path.read_text() == source
+
     def test_local_ruff_module_is_never_executed(self) -> None:
         """Invoke the installed binary instead of importing inspected Python code."""
         self.write("ruff.py", 'raise RuntimeError("inspected code executed")\n')

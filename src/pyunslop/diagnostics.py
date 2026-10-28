@@ -25,7 +25,7 @@ class Finding:
 
 # Public warnings add file identity; native findings do not retain paths or trees.
 @dataclass(frozen=True)
-class Warning:  # noqa: A001
+class Warning:
     """A source location and an actionable warning."""
 
     path: Path

@@ -30,7 +30,7 @@ class ModuleDocAnalyzer(BindingVisitor):
         super().__init__()
         self.cli_doc_used = False
 
-    def visit_Call(self, node: ast.Call) -> None:  # noqa: N802
+    def visit_Call(self, node: ast.Call) -> None:
         """Record help uses while import aliases are in scope."""
         self.cli_doc_used |= uses_cli_doc(node, self.qualified)
         self.generic_visit(node)

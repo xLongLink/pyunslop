@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import re
 import ast
 import tokenize
 from typing import TYPE_CHECKING
@@ -9,6 +10,7 @@ if TYPE_CHECKING:
     from ..source import Source
 MAX_CODE_LINES = 10
 NON_CODE_TOKENS = {tokenize.COMMENT, tokenize.ENCODING, tokenize.ENDMARKER, tokenize.INDENT, tokenize.DEDENT, tokenize.NEWLINE, tokenize.NL}
+NOQA_DIRECTIVE = re.compile(r"#\s*(?:(?:ruff|flake8)\s*:\s*)?noqa\b", re.IGNORECASE)
 
 
 def counted_lines(source: Source) -> tuple[set[int], set[int]]:
@@ -106,6 +108,17 @@ def check_spacing(source: Source) -> list[Finding]:
     return findings
 
 
+def check_suppressions(source: Source) -> list[Finding]:
+    """Reject suppression directives in real comments, never in string contents."""
+    findings = []
+    for token in source.comments:
+        match = NOQA_DIRECTIVE.search(token.string)
+        if match:
+            line, column = token.start
+            findings.append(Finding(line, column + match.start() + 1, "CM004", "noqa suppression directives are forbidden"))
+    return findings
+
+
 def check_comments(source: Source) -> list[Finding]:
     """Check lexical policies using the file's shared tokens."""
-    return [*check_frequency(source), *check_separation(source), *check_spacing(source)]
+    return [*check_frequency(source), *check_separation(source), *check_spacing(source), *check_suppressions(source)]

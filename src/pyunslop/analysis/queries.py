@@ -52,13 +52,13 @@ class QueryAnalyzer(BindingVisitor):
             return self.annotation(self.functions[-1].returns) in {"typing.Sequence", "collections.abc.Sequence"}
         return False
 
-    def visit_Attribute(self, node: ast.Attribute) -> None:  # noqa: N802
+    def visit_Attribute(self, node: ast.Attribute) -> None:
         """Identify unnamed asynchronous query results."""
         if isinstance(node.value, ast.Await) and self.kind(node.value) in query_types.RESULT_KINDS:
             self.findings.append(Finding.at(node, "PY001", "name the asynchronous query result before consuming it"))
         self.generic_visit(node)
 
-    def visit_Return(self, node: ast.Return) -> None:  # noqa: N802
+    def visit_Return(self, node: ast.Return) -> None:
         """Report each mutable query-row return contract once."""
         if self.functions:
             function = self.functions[-1]
@@ -74,7 +74,7 @@ class QueryAnalyzer(BindingVisitor):
                 self.findings.append(Finding.at(function.returns, "PY002", "use Sequence[T] for a read-only query-result return type"))
         self.generic_visit(node)
 
-    def visit_For(self, node: LoopNode) -> None:  # noqa: N802
+    def visit_For(self, node: LoopNode) -> None:
         """Review buffered iteration and single-column row unpacking."""
         iterable = node.iter
         if (
@@ -100,9 +100,9 @@ class QueryAnalyzer(BindingVisitor):
             )
         super().visit_For(node)
 
-    visit_AsyncFor = visit_For  # noqa: N815
+    visit_AsyncFor = visit_For
 
-    def visit_Assign(self, node: ast.Assign) -> None:  # noqa: N802
+    def visit_Assign(self, node: ast.Assign) -> None:
         """Review one-column unpacking before assignment changes provenance."""
         value = node.value
         single_row = (
@@ -137,7 +137,7 @@ class QueryAnalyzer(BindingVisitor):
                 )
         return False
 
-    def visit_Call(self, node: ast.Call) -> None:  # noqa: N802
+    def visit_Call(self, node: ast.Call) -> None:
         """Check copies, SQL expression inputs, scalar APIs, and size-only loads."""
         parent = self.parents[-2] if len(self.parents) > 1 else None
         if self.is_copy(node) and self.accepts_sequence(parent):
@@ -199,7 +199,7 @@ class QueryAnalyzer(BindingVisitor):
             ]
         return []
 
-    def visit_Expr(self, node: ast.Expr) -> None:  # noqa: N802
+    def visit_Expr(self, node: ast.Expr) -> None:
         """Review adjacent same-session commit/refresh calls without rewriting."""
         refresh = called_method(node)
         if refresh and refresh.attr == "refresh" and self.kind(refresh.value) == "@session":

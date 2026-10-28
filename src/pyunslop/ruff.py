@@ -1,5 +1,5 @@
 import json
-import subprocess  # noqa: S404
+import subprocess
 from typing import TypedDict, cast
 from pathlib import Path
 from dataclasses import replace
@@ -43,8 +43,8 @@ def run_ruff(command: str, config: Path, paths: list[Path]) -> list[CheckWarning
 
     # Resolve the tests pattern at the scanned project root, not the installed preset directory.
     args += ["--config", 'lint.per-file-ignores = {"tests/**" = ["ARG", "N803", "S"]}']
-    args += ["--no-fix"] if command == "check" else ["--check"]
-    result = subprocess.run(args + ["--", *map(str, paths)], capture_output=True, text=True, check=False)  # noqa: S603
+    args += ["--no-fix", "--ignore-noqa"] if command == "check" else ["--check"]
+    result = subprocess.run(args + ["--", *map(str, paths)], capture_output=True, text=True, check=False)
     try:
         diagnostics: object = json.loads(result.stdout)
     except json.JSONDecodeError as exc:
