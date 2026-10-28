@@ -11,19 +11,28 @@ SNAPSHOT_CONSUMERS = (
 EAGER_EXPRESSIONS = ("sum([load(x) for x in xs])", "any([item.flag for item in items])", "all([item.flag for item in items])")
 
 
-def test_direct_iterable_consumer() -> None:
-    """Review a list comprehension consumed directly by a known iterable API."""
-    assert codes("total = sum([invoice.amount for invoice in invoices])") == ["SLOP018"]
+@pytest.mark.parametrize("consumer", ["tuple", "frozenset"])
+def test_direct_iterable_consumer(consumer: str) -> None:
+    """Review direct consumers not covered by Ruff."""
+    assert codes(f"total = {consumer}([invoice.amount for invoice in invoices])") == ["SLOP017"]
 
 
-def test_adjacent_single_use_temporary() -> None:
+@pytest.mark.parametrize("consumer", ["sum", "min", "max", "set"])
+def test_direct_consumers_covered_by_ruff_are_ignored(consumer: str) -> None:
+    """Avoid duplicating Ruff C403/C419, including qualified builtins."""
+    assert codes(f"total = {consumer}([invoice.amount for invoice in invoices])") == []
+    assert codes(f"import builtins\ntotal = builtins.{consumer}([invoice.amount for invoice in invoices])") == []
+
+
+@pytest.mark.parametrize("consumer", ["sum", "min", "max", "set", "tuple", "frozenset"])
+def test_adjacent_single_use_temporary(consumer: str) -> None:
     """Review a temporary list consumed only by the next statement."""
-    source = """
+    source = f"""
     def total(invoices):
         amounts = [invoice.amount for invoice in invoices]
-        return sum(amounts)
+        return {consumer}(amounts)
     """
-    assert codes(source) == ["SLOP018"]
+    assert codes(source) == ["SLOP017"]
 
 
 @pytest.mark.parametrize("body", SNAPSHOT_CONSUMERS)

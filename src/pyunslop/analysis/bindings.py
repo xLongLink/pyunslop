@@ -1,7 +1,7 @@
 import ast
 from typing import TypeVar
-from pyunslop.contracts import LoopNode, WithNode, FunctionNode
 from dataclasses import dataclass
+from pyunslop.contracts import LoopNode, WithNode, FunctionNode
 
 Value = TypeVar("Value")
 
@@ -22,9 +22,8 @@ class Binding:
 class BindingVisitor(ast.NodeVisitor):
     """Resolve names at their use sites without importing inspected code."""
 
-    def __init__(self, source: str = "") -> None:
+    def __init__(self) -> None:
         """Start a traversal with independent scope and annotation state."""
-        self.source_lines = source.splitlines()
         self.bindings: dict[str, Binding] = {}
         self.contracts: dict[str, str] = {}
         self.parents: list[ast.AST] = []

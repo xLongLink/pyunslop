@@ -17,7 +17,7 @@ def test_borrowed_client_only_class() -> None:
         async def delete(self, organization_id):
             await utils.delete_namespace(await self._client.api(), organization_id)
     """
-    assert codes(source) == ["SLOP022"]
+    assert codes(source) == ["SLOP021"]
 
 
 @pytest.mark.parametrize("source", OWNERSHIP_BOUNDARIES)

@@ -9,7 +9,7 @@ def test_import_aliases_and_session_constructor() -> None:
         session = sa.AsyncSession(engine)
         users = (await session.execute(stmt)).all()
     """
-    assert query_codes(source) == ["SLOP005"]
+    assert query_codes(source) == ["SLOP004"]
 
 
 def test_sqlmodel_exec() -> None:
@@ -19,7 +19,7 @@ def test_sqlmodel_exec() -> None:
     async def fetch(s: ModelSession):
         return (await s.exec(stmt)).all()
     """
-    assert query_codes(source) == ["SLOP005"]
+    assert query_codes(source) == ["SLOP004"]
 
 
 def test_session_factory_context_manager() -> None:
@@ -31,7 +31,7 @@ def test_session_factory_context_manager() -> None:
         async with sessions() as session:
             return (await session.execute(stmt)).scalars().all()
     """
-    assert query_codes(source) == ["SLOP019", "SLOP005"]
+    assert query_codes(source) == ["SLOP018", "SLOP004"]
 
 
 def test_typed_result_parameter() -> None:
@@ -41,7 +41,7 @@ def test_typed_result_parameter() -> None:
     def consume(result: ScalarResult[User]) -> Sequence[User]:
         return list(result.all())
     """
-    assert query_codes(source) == ["SLOP007"]
+    assert query_codes(source) == ["SLOP006"]
 
 
 def test_unrelated_apis_and_plain_lists_are_ignored() -> None:
@@ -86,4 +86,4 @@ def test_sync_sqlmodel_query_results() -> None:
         result = s.exec(stmt)
         return list(result.all())
     """
-    assert query_codes(source) == ["SLOP007"]
+    assert query_codes(source) == ["SLOP006"]

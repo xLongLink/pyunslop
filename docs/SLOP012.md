@@ -1,30 +1,19 @@
-# SLOP012: Return endpoint payloads directly
+# SLOP012: No leading module docstrings
 
-Avoid generic success envelopes in recognized FastAPI routes. Detection
-requires literal `success=True` plus `detail` or `data`, including direct
-dictionaries, `dict()` constructors, and locally assigned envelopes. An explicit
-`openapi_extra={"x-external-protocol": True}` contract is exempt;
-`response_model=None` alone is not. Ordinary payloads and non-route functions
-are ignored. Preserve required external protocol contracts.
+This fixed repository policy rejects leading module docstrings, not function
+or class docstrings. A module is exempt when its `__doc__` explicitly supplies
+`description`, `epilog`, or `help` to a recognized argparse, Click, or Typer API.
+Simply referencing `__doc__` is not an exemption.
 
 ```py
 # Bad
-from fastapi import APIRouter
-from schemas import UserResponse
+"""User lookup utilities."""
 
-router = APIRouter()
-
-@router.get("/users", response_model=list[UserResponse])
-async def list_users():
-    return {"success": True, "detail": "Users fetched", "data": await users.fetch()}
+def find_user(user_id):
+    return users.get(user_id)
 
 # Good
-from fastapi import APIRouter
-from schemas import UserResponse
-
-router = APIRouter()
-
-@router.get("/users", response_model=list[UserResponse])
-async def list_users():
-    return await users.fetch()
+def find_user(user_id):
+    """Look up a user by identifier."""
+    return users.get(user_id)
 ```

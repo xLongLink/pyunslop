@@ -7,7 +7,7 @@ from pyunslop.diagnostics import Finding
 if TYPE_CHECKING:
     from pyunslop.analysis.bindings import BindingVisitor
 
-CODE = "SLOP010"
+CODE = "SLOP009"
 DOMAIN_CLASSES = {"Postgres", "Kubernetes"}
 
 

@@ -1,25 +1,30 @@
-# SLOP015: Order model fields by name length
+# SLOP015: Review repeated response validation
 
-Within each blank-line-separated section of a directly recognized Pydantic
-`BaseModel`, order annotated fields from shortest name to longest. Equal-length
-names have no required order. Non-field statements, private attributes,
-`model_config`, and recognized `ClassVar` annotations separate runs. Indirect
-custom bases are not inferred. This is a style-policy warning, not an automatic
-reorder: review validation dependencies, default factories, and serialization
-order before changing fields. The example uses independent fields.
+Review direct `return Model.model_validate(value)` calls when all known route
+response-model contracts already name that model. Explicit validation options,
+computed inputs, external protocols, and locally visible validators or custom
+initialization are exempt. Imported validators cannot be inspected. This is a
+review candidate, not proof that reconstruction is redundant; the good example
+assumes validation performs no intentional transformation beyond the route contract.
 
 ```py
 # Bad
-from pydantic import BaseModel
+from fastapi import APIRouter
+from schemas import UserResponse
 
-class UserResponse(BaseModel):
-    description: str
-    id: int
+router = APIRouter()
+
+@router.get("/user", response_model=UserResponse)
+def get_user():
+    return UserResponse.model_validate(user)
 
 # Good
-from pydantic import BaseModel
+from fastapi import APIRouter
+from schemas import UserResponse
 
-class UserResponse(BaseModel):
-    id: int
-    description: str
+router = APIRouter()
+
+@router.get("/user", response_model=UserResponse)
+def get_user():
+    return user
 ```

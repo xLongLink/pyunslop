@@ -9,7 +9,7 @@ if TYPE_CHECKING:
     from pyunslop.source import Source
     from pyunslop.contracts import ComprehensionNode
 
-CODE = "SLOP017"
+CODE = "SLOP016"
 
 
 def argument_dependencies(arguments: Sequence[ast.expr]) -> list[ast.NamedExpr]:

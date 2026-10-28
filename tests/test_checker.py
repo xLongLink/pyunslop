@@ -11,8 +11,8 @@ from collections.abc import Callable
 
 def test_noqa_cannot_hide_native_findings(check_source: Callable[[str], list[CheckWarning]]) -> None:
     """A suppression must not hide itself or another native policy warning."""
-    warnings = check_source('"""Module docs."""  # noqa: SLOP013, SLOP004\n')
-    assert {warning.code for warning in warnings} == {"SLOP013", "SLOP004"}
+    warnings = check_source('"""Module docs."""  # noqa: SLOP012, SLOP003\n')
+    assert {warning.code for warning in warnings} == {"SLOP012", "SLOP003"}
 
 
 def test_invalid_source_is_skipped(check_source: Callable[[str], list[CheckWarning]]) -> None:
@@ -54,7 +54,7 @@ def test_one_source_parse_feeds_all_native_rules(source_file: Path, mocker: Mock
     # Multiple AST traversals must not repeat parsing or tokenization.
     assert parse.call_count == 1
     assert tokens.call_count == 1
-    assert {warning.code for warning in warnings} == {"SLOP013", "SLOP002", "SLOP003"}
+    assert {warning.code for warning in warnings} == {"SLOP012", "SLOP002"}
 
 
 def test_comment_and_ast_locations_use_one_based_columns(source_file: Path) -> None:
@@ -62,7 +62,7 @@ def test_comment_and_ast_locations_use_one_based_columns(source_file: Path) -> N
     source = '"""Module docs."""\n#bad\n'
     source_file.write_text(source)
     warnings = check_file(source_file)
-    assert [(warning.line, warning.column, warning.code) for warning in warnings] == [(1, 1, "SLOP013"), (2, 1, "SLOP002"), (2, 1, "SLOP003")]
+    assert [(warning.line, warning.column, warning.code) for warning in warnings] == [(1, 1, "SLOP012"), (2, 1, "SLOP002")]
 
 
 def test_warning_location_and_integration(tmp_path: Path) -> None:
@@ -71,4 +71,4 @@ def test_warning_location_and_integration(tmp_path: Path) -> None:
     path = tmp_path / "query.py"
     path.write_text(source)
     warnings = check_file(path)
-    assert [(w.code, w.line, w.column) for w in warnings] == [("SLOP005", 4, 12)]
+    assert [(w.code, w.line, w.column) for w in warnings] == [("SLOP004", 4, 12)]

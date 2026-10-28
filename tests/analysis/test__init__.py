@@ -19,8 +19,8 @@ def test_domains_are_independent_on_the_same_tree() -> None:
     tree = ast.parse(source)
     queries = analyze_queries(tree)
     endpoints = analyze_endpoints(tree)
-    assert [finding.code for finding in queries] == ["SLOP005"]
-    assert [finding.code for finding in endpoints] == ["SLOP011"]
+    assert [finding.code for finding in queries] == ["SLOP004"]
+    assert [finding.code for finding in endpoints] == ["SLOP010"]
 
     # Reversing the order must not expose another analyzer's state.
     assert analyze_endpoints(tree) == endpoints
@@ -32,7 +32,7 @@ def test_domains_are_independent_on_the_same_tree() -> None:
 
 def test_policies_are_always_enabled() -> None:
     """Enable the module-docstring policy without requiring configuration."""
-    assert codes('"""Module docs."""\n') == ["SLOP013"]
+    assert codes('"""Module docs."""\n') == ["SLOP012"]
 
 
 @pytest.mark.parametrize(

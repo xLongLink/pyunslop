@@ -1,15 +1,16 @@
-# SLOP003: Space after comment markers
+# SLOP003: No suppression directives
 
-Start comments with `# ` rather than attaching text directly to `#`. A bare `#`
-and a first-line shebang are exempt. Hash characters inside strings are not
-comments.
+Do not use bare or code-specific `noqa` directives, including file-wide
+`ruff: noqa` and `flake8: noqa` forms and case variants. Detection uses real
+comment tokens, not string contents. These directives cannot suppress pyunslop
+findings. Fix the issue where appropriate; keep legitimate warnings visible rather than adding
+another bypass. Findings remain warning-only.
 
 ```py
 # Bad
-#Fetch active accounts.
-users = fetch_users()
+import os  # noqa: F401
+value = 1
 
 # Good
-# Fetch active accounts.
-users = fetch_users()
+value = 1
 ```

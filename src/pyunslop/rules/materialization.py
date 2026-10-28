@@ -9,7 +9,7 @@ if TYPE_CHECKING:
     from pyunslop.contracts import FunctionNode, QualifiedName
     from pyunslop.analysis.bindings import BindingVisitor
 
-CODE = "SLOP018"
+CODE = "SLOP017"
 ITERABLE_CONSUMERS = {"sum", "min", "max", "tuple", "set", "frozenset"}
 
 
@@ -63,9 +63,9 @@ def check_assign(node: ast.Assign, context: BindingVisitor) -> list[Finding]:
 
 
 def check_call(node: ast.Call, context: BindingVisitor) -> list[Finding]:
-    """Review direct comprehensions passed to known iterable-only consumers."""
+    """Review direct comprehensions not already covered by Ruff C403/C419."""
     if (
-        context.qualified(node.func) in ITERABLE_CONSUMERS
+        context.qualified(node.func) in {"tuple", "frozenset"}
         and len(node.args) == 1
         and not node.keywords
         and simple_comprehension(node.args[0])

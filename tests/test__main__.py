@@ -23,7 +23,7 @@ def run_cli(tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.Capt
 
 def test_warnings_exit_successfully_without_modifying_source(source_file: Path, run_cli: Callable[..., tuple[int, str, str]]) -> None:
     """Report findings without changing source bytes or the success exit status."""
-    source = "#bad\n" + "x = 1\n" * 11
+    source = "# noqa\n" + "x = 1\n" * 11
     source_file.write_text(source)
     result, stdout, stderr = run_cli()
     assert result == 0
@@ -45,7 +45,7 @@ def test_cli_does_not_run_external_checks(source_file: Path, run_cli: Callable[.
 
 def test_module_defaults_to_current_directory_and_ignores_werror(tmp_path: Path, source_file: Path) -> None:
     """Support module execution without emitting promotable Python warnings."""
-    source_file.write_text("#bad\n")
+    source_file.write_text("# noqa\n")
     result = subprocess.run([sys.executable, "-W", "error", "-m", "pyunslop"], cwd=tmp_path, capture_output=True, text=True, check=False)
 
     # Assert: subprocess success must still include the expected advisory finding.
@@ -63,7 +63,7 @@ def test_model_field_order_is_warning_only(source_file: Path, run_cli: Callable[
     source_file.write_text(source)
     result, stdout, stderr = run_cli()
     assert (result, stderr) == (0, "Found 1 warning(s).\n")
-    assert "example.py:4:5: warning: SLOP015" in stdout
+    assert "example.py:4:5: warning: SLOP014" in stdout
     assert source_file.read_text() == source
 
 
@@ -71,7 +71,7 @@ def test_invalid_source_is_skipped_and_scan_continues(source_file: Path, run_cli
     """Continue inspecting valid files after encountering invalid syntax."""
     source_file.write_text("def broken(\n")
     other = source_file.with_name("other.py")
-    other.write_text("#bad\n")
+    other.write_text("# noqa\n")
     result, stdout, stderr = run_cli()
     assert result == 0
     assert source_file.name not in stdout
@@ -90,7 +90,7 @@ def test_recursively_scans_project_with_fixed_exclusions(source_file: Path, run_
     for directory in ("nested", ".venv"):
         path = source_file.parent / directory
         path.mkdir()
-        (path / "module.py").write_text("#bad\n")
+        (path / "module.py").write_text("# noqa\n")
 
     # Act: run against the project root, not an individually selected file.
     result, stdout, stderr = run_cli()
@@ -120,7 +120,7 @@ def test_query_findings_are_warnings(source_file: Path, run_cli: Callable[..., t
     )
     result, stdout, _ = run_cli()
     assert result == 0
-    for code in ("SLOP005", "SLOP006", "SLOP007"):
+    for code in ("SLOP004", "SLOP005", "SLOP006"):
         assert f"warning: {code}" in stdout
 
 
@@ -160,7 +160,7 @@ def test_additional_rules_are_warning_only(source_file: Path, run_cli: Callable[
     )
     result, stdout, _ = run_cli()
     assert result == 0
-    for code in ("SLOP008", "SLOP009", "SLOP010", "SLOP011", "SLOP012"):
+    for code in ("SLOP007", "SLOP008", "SLOP009", "SLOP010", "SLOP011"):
         assert f"warning: {code}" in stdout
 
 
@@ -169,7 +169,7 @@ def test_repository_policy_is_always_enabled_and_warning_only(source_file: Path,
     source_file.write_text('"""Module docs."""\n')
     result, stdout, _ = run_cli()
     assert result == 0
-    assert "warning: SLOP013" in stdout
+    assert "warning: SLOP012" in stdout
 
 
 def test_review_candidates_are_warning_only(source_file: Path, run_cli: Callable[..., tuple[int, str, str]]) -> None:
@@ -185,19 +185,19 @@ def test_review_candidates_are_warning_only(source_file: Path, run_cli: Callable
         "async def exists(s: AsyncSession):\n"
         "    result = await s.scalars(stmt)\n"
         "    return bool(result.all())\n"
-        "total = sum([invoice.amount for invoice in invoices])\n"
+        "total = tuple([invoice.amount for invoice in invoices])\n"
     )
     result, stdout, _ = run_cli()
     assert result == 0
-    for code in ("SLOP018", "SLOP019", "SLOP020", "SLOP023"):
+    for code in ("SLOP017", "SLOP018", "SLOP019", "SLOP022"):
         assert f"warning: {code}" in stdout
 
 
 def test_single_use_constant_is_warning_only(source_file: Path, run_cli: Callable[..., tuple[int, str, str]]) -> None:
-    """Report SLOP024 without changing source or failing the command."""
+    """Report SLOP023 without changing source or failing the command."""
     source = "_TIMEOUT = 30\nconnect(timeout=_TIMEOUT)\n"
     source_file.write_text(source)
     result, stdout, _ = run_cli()
     assert result == 0
-    assert "warning: SLOP024" in stdout
+    assert "warning: SLOP023" in stdout
     assert source_file.read_text() == source

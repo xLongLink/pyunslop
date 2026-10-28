@@ -1,19 +1,25 @@
-# SLOP021: Review transparent wrappers
+# SLOP021: Review borrowed-client-only classes
 
-Review exact private positional forwarding functions and private empty
-subclasses, plus empty FastAPI/Starlette test-client subclasses. Public
-functions, typed or documented contracts, decorators, inherited framework
-methods, and subclasses adding behavior are exempt. Preserve meaningful
-compatibility, lifecycle, or framework boundaries. Only remove a wrapper after
-checking its callers; the example assumes no such boundary is needed.
+Review plain classes whose only state is a directly borrowed client and whose
+methods only use that field. Owned clients, extra state, inheritance,
+decorators, documented boundaries, properties, and lifecycle hooks are skipped.
+Namespaced functions may be simpler, but preserve meaningful ownership or API
+boundaries. The example assumes the class adds no intentional boundary.
 
 ```py
 # Bad
-def _fetch(value):
-    return fetch(value)
+class Users:
+    def __init__(self, client):
+        self.client = client
 
-result = _fetch(value)
+    def fetch(self):
+        return self.client.fetch_users()
+
+users = Users(client).fetch()
 
 # Good
-result = fetch(value)
+def fetch_users(client):
+    return client.fetch_users()
+
+users = fetch_users(client)
 ```

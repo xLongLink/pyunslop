@@ -1,18 +1,21 @@
-# SLOP009: Generators for SQL membership expressions
+# SLOP009: Name domain instances
 
-Pass a generator rather than a single-use list comprehension to SQLAlchemy
-`.in_()`. Detection requires a recognized SQLAlchemy/SQLModel expression
-constructor or a known query expression context. Existing list variables and
-unrelated methods named `in_` are ignored.
+Assign `Postgres` and `Kubernetes` instances before calling their methods,
+including methods reached through attributes. Imported aliases and
+module-qualified constructors are recognized. This explicit class-name
+allowlist does not apply to other classes or ordinary fluent APIs.
 
 ```py
 # Bad
-from sqlalchemy import column
+from services import Postgres
 
-condition = column("user_id").in_([member.user_id for member in members])
+async def inspect_database(config):
+    return await Postgres(config).usage()
 
 # Good
-from sqlalchemy import column
+from services import Postgres
 
-condition = column("user_id").in_(member.user_id for member in members)
+async def inspect_database(config):
+    database = Postgres(config)
+    return await database.usage()
 ```

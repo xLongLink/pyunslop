@@ -1,30 +1,18 @@
-# SLOP016: Review repeated response validation
+# SLOP016: Make comprehension argument dependencies explicit
 
-Review direct `return Model.model_validate(value)` calls when all known route
-response-model contracts already name that model. Explicit validation options,
-computed inputs, external protocols, and locally visible validators or custom
-initialization are exempt. Imported validators cannot be inspected. This is a
-review candidate, not proof that reconstruction is redundant; the good example
-assumes validation performs no intentional transformation beyond the route contract.
+Use an explicit loop when a walrus binding in one constructor argument is read
+by a later argument inside a list, set, or dictionary comprehension or generator
+expression. Constructors are recognized conservatively by capitalized names.
+Independent bindings are unaffected. Preserve evaluation order and review
+comprehension scope when moving bindings into a loop.
 
 ```py
 # Bad
-from fastapi import APIRouter
-from schemas import UserResponse
-
-router = APIRouter()
-
-@router.get("/user", response_model=UserResponse)
-def get_user():
-    return UserResponse.model_validate(user)
+rows = [Row(value=(value := item.value), doubled=value * 2) for item in items]
 
 # Good
-from fastapi import APIRouter
-from schemas import UserResponse
-
-router = APIRouter()
-
-@router.get("/user", response_model=UserResponse)
-def get_user():
-    return user
+rows = []
+for item in items:
+    value = item.value
+    rows.append(Row(value=value, doubled=value * 2))
 ```

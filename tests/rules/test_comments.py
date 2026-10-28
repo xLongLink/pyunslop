@@ -15,7 +15,7 @@ SUPPRESSION_DIRECTIVES = (
     "# noqa",
     "#noqa: F401",
     "# NoQa: F401, F841",
-    "# noqa: SLOP004",
+    "# noqa: SLOP003",
     # File-wide forms are also forbidden inside inline comment tokens.
     "# ruff: noqa",
     "# flake8: noqa: F401",
@@ -171,17 +171,15 @@ def test_first_line_and_separated_comments_are_allowed(check_source: Callable[[s
     assert check_source("# Heading\nx = 1\n\n# Next step\ny = 2\n") == []
 
 
-def test_comment_spacing_and_locations(check_source: Callable[[str], list[CheckWarning]]) -> None:
-    """Keep shebang exemptions and one-based comment locations."""
-    warnings = check_source("#!/usr/bin/env python3\n#\nx = 1  #bad\n\n#bad\n")
-    assert [(w.code, w.line, w.column) for w in warnings] == [("SLOP003", 3, 8), ("SLOP003", 5, 1)]
-    assert ":3:8: warning: SLOP003 " in str(warnings[0])
+def test_comment_spacing_is_left_to_ruff(check_source: Callable[[str], list[CheckWarning]]) -> None:
+    """Leave inline and block comment spacing to Ruff E262/E265."""
+    assert check_source("#!/usr/bin/env python3\n#\nx = 1  #bad\n\n#bad\n## heading\n") == []
 
 
 @pytest.mark.parametrize("directive", SUPPRESSION_DIRECTIVES)
 def test_noqa_directive_variants(check_source: Callable[[str], list[CheckWarning]], directive: str) -> None:
     """Reject inline, blanket, code-specific, and file-wide suppressions."""
-    findings = [warning for warning in check_source(f"value = 1  {directive}\n") if warning.code == "SLOP004"]
+    findings = [warning for warning in check_source(f"value = 1  {directive}\n") if warning.code == "SLOP003"]
     assert [(warning.line, warning.column) for warning in findings] == [(1, 12)]
     assert findings[0].message == "noqa suppression directives are forbidden"
 
@@ -190,7 +188,7 @@ def test_noqa_locations_inside_comments(check_source: Callable[[str], list[Check
     """Locate the directive itself after indentation or explanatory text."""
     source = "if ready:\n    value = 1  # explanation # noqa: F401\n"
     warnings = check_source(source)
-    assert [(warning.code, warning.line, warning.column) for warning in warnings] == [("SLOP004", 2, 30)]
+    assert [(warning.code, warning.line, warning.column) for warning in warnings] == [("SLOP003", 2, 30)]
 
 
 def test_noqa_strings_and_ordinary_comments_are_ignored(check_source: Callable[[str], list[CheckWarning]]) -> None:

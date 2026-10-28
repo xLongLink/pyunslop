@@ -1,22 +1,22 @@
-# SLOP007: Avoid redundant query-row copies
+# SLOP007: Iterate buffered results directly
 
-Avoid `list()` around recognized query-row materialization such as `all()` or
-`fetchall()` when a sequence is sufficient. Checks cover untyped local
-assignments and explicit sequence-compatible assignments or returns. Mutable
-list contracts and unknown consumers are left alone; preserve intentional copies.
+Iterate recognized buffered query results rather than calling `all()` solely
+for a synchronous `for` loop. Streaming results, `yield_per`, asynchronous
+iteration, unknown result types, and materialized lists reused elsewhere are
+not candidates.
 
 ```py
 # Bad
 from sqlalchemy.engine import Result
 
-def consume(result: Result):
-    rows = list(result.all())
-    return rows
+def process(result: Result):
+    for row in result.all():
+        consume(row)
 
 # Good
 from sqlalchemy.engine import Result
 
-def consume(result: Result):
-    rows = result.all()
-    return rows
+def process(result: Result):
+    for row in result:
+        consume(row)
 ```

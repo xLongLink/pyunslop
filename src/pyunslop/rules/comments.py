@@ -32,14 +32,18 @@ def is_literal_value(node: ast.AST) -> bool:
 
 def counted_lines(source: Source) -> tuple[set[int], set[int]]:
     """Collapse literal data, exclude imports, and locate function resets."""
-    function_starts = {node.lineno for node in ast.walk(source.tree) if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef))}
+    function_starts: set[int] = set()
     import_lines: set[int] = set()
     string_continuations: set[int] = set()
     literal_spans = []
 
     # Collect source exclusions separately from token-level counting.
     for node in ast.walk(source.tree):
-        if isinstance(node, (ast.Import, ast.ImportFrom)):
+        if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
+            function_starts.add(node.lineno)
+
+        # Imports do not contribute to the complexity budget.
+        elif isinstance(node, (ast.Import, ast.ImportFrom)):
             import_lines.update(range(node.lineno, (node.end_lineno or node.lineno) + 1))
 
         # Adjacent literals share one AST node across their physical source lines.
@@ -136,28 +140,10 @@ def check_separation(source: Source) -> list[Finding]:
         previous = source.lines[line_number - 2] if line_number > 1 else ""
 
         # Only the first comment in an ordinary block needs a preceding blank line.
-        if (
-            line_number > 1
-            and previous.strip()
-            and line_number - 1 not in source.standalone_comments
-            and line_number not in continued
-        ):
+        if line_number > 1 and previous.strip() and line_number - 1 not in source.standalone_comments and line_number not in continued:
 
             # Report only the block's opening comment.
             findings.append(Finding(line_number, 1, "SLOP002", "expected a blank line before the comment block"))
-    return findings
-
-
-def check_spacing(source: Source) -> list[Finding]:
-    """Require spaces after comment markers except bare markers and shebangs."""
-    findings = []
-    for token in source.comments:
-        line, column = token.start
-        is_shebang = line == 1 and token.string.startswith("#!")
-
-        # A bare marker is valid; other comments require one leading space.
-        if not is_shebang and token.string != "#" and not token.string.startswith("# "):
-            findings.append(Finding(line, column + 1, "SLOP003", "expected a space after '#'"))
     return findings
 
 
@@ -170,10 +156,10 @@ def check_suppressions(source: Source) -> list[Finding]:
 
             # Match offsets are relative to the token, not the physical source line.
             line, column = token.start
-            findings.append(Finding(line, column + match.start() + 1, "SLOP004", "noqa suppression directives are forbidden"))
+            findings.append(Finding(line, column + match.start() + 1, "SLOP003", "noqa suppression directives are forbidden"))
     return findings
 
 
 def check_comments(source: Source) -> list[Finding]:
     """Check lexical policies using the file's shared tokens."""
-    return [*check_frequency(source), *check_separation(source), *check_spacing(source), *check_suppressions(source)]
+    return [*check_frequency(source), *check_separation(source), *check_suppressions(source)]

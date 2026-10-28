@@ -1,23 +1,22 @@
-# SLOP006: Read-only query return contracts
+# SLOP006: Avoid redundant query-row copies
 
-Use `Sequence[T]` rather than `list[T]` or `typing.List[T]` when directly
-returning recognized query rows, including rows wrapped in `list()`. Ordinary
-functions that build mutable lists are ignored. Preserve a list contract when
-callers intentionally require mutability; this warning does not prove otherwise.
+Avoid `list()` around recognized query-row materialization such as `all()` or
+`fetchall()` when a sequence is sufficient. Checks cover untyped local
+assignments and explicit sequence-compatible assignments or returns. Mutable
+list contracts and unknown consumers are left alone; preserve intentional copies.
 
 ```py
 # Bad
-from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.engine import Result
 
-async def fetch(session: AsyncSession) -> list[User]:
-    result = await session.scalars(statement)
-    return result.all()
+def consume(result: Result):
+    rows = list(result.all())
+    return rows
 
 # Good
-from collections.abc import Sequence
-from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.engine import Result
 
-async def fetch(session: AsyncSession) -> Sequence[User]:
-    result = await session.scalars(statement)
-    return result.all()
+def consume(result: Result):
+    rows = result.all()
+    return rows
 ```

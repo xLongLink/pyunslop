@@ -39,7 +39,7 @@ def test_import_aliases_and_warning_location(imported: str, base: str) -> None:
     """Locate a shorter field for each supported Pydantic import spelling."""
     source = f"{imported}\nclass Read({base}):\n    description: str\n    id: int\n"
     (finding,) = check_patterns(ast.parse(source), source)
-    assert (finding.line, finding.column, finding.code) == (4, 5, "SLOP015")
+    assert (finding.line, finding.column, finding.code) == (4, 5, "SLOP014")
     assert "validation dependencies" in finding.message
 
 
@@ -59,7 +59,7 @@ def test_blank_lines_divide_sections_but_comments_do_not() -> None:
         date: str
     """)
     findings = check_patterns(ast.parse(source), source)
-    assert [finding.code for finding in findings] == ["SLOP015"]
+    assert [finding.code for finding in findings] == ["SLOP014"]
     assert (findings[0].line, findings[0].column) == (12, 5)
     assert source.splitlines()[findings[0].line - 1].strip() == "date: str"
 

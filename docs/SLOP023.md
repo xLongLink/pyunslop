@@ -1,22 +1,20 @@
-# SLOP023: Review immediate post-commit refreshes
+# SLOP023: Review single-use literal constants
 
-Review an immediate commit/refresh pair on the same recognized session. This
-does not prove the refresh redundant: inspect `expire_on_commit`, server-generated
-defaults, and required relationships before removing it. Other sessions and
-intervening work are not candidates. The good example applies only when no
-refreshed state is required.
+Review uppercase function-local and private module constants assigned an
+immutable literal and read exactly once later in the same scope. Rebinding,
+nested-scope or comprehension references, annotations, mutable or computed
+values, class constants, public module names, explicit exports, and recognized
+dynamic namespace access are skipped. Preserve names that explain units,
+domain meaning, or boundaries. A warning does not prove that inlining improves
+readability or preserves identity; the example assumes the name adds no meaning.
 
 ```py
 # Bad
-from sqlalchemy.ext.asyncio import AsyncSession
-
-async def save(session: AsyncSession, user):
-    await session.commit()
-    await session.refresh(user)
+def render():
+    LABEL = "Ready"
+    return format_label(LABEL)
 
 # Good
-from sqlalchemy.ext.asyncio import AsyncSession
-
-async def save(session: AsyncSession, user):
-    await session.commit()
+def render():
+    return format_label("Ready")
 ```

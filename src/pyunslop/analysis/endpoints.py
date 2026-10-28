@@ -1,9 +1,9 @@
 import ast
+from dataclasses import dataclass
 from pyunslop.analysis import http
-from pyunslop.analysis.bindings import BindingVisitor
 from pyunslop.contracts import FunctionNode
-from dataclasses import field, dataclass
 from pyunslop.diagnostics import Finding
+from pyunslop.analysis.bindings import BindingVisitor
 
 
 @dataclass
@@ -12,7 +12,8 @@ class Endpoint:
 
     routes: list[ast.Call]
     response_models: set[str]
-    raw_returns: list[bool] = field(default_factory=list)
+    saw_return: bool = False
+    all_returns_raw: bool = True
 
 
 class EndpointAnalyzer(BindingVisitor):
@@ -56,16 +57,21 @@ class EndpointAnalyzer(BindingVisitor):
         endpoint = Endpoint(
             routes, {self.qualified(keyword.value) for route in routes for keyword in route.keywords if keyword.arg == "response_model"}
         )
+
+        # Return checks need this context only while its function is active.
         self.endpoints[node] = endpoint
-        super().visit_FunctionDef(node)
+        try:
+            super().visit_FunctionDef(node)
+        finally:
+            del self.endpoints[node]
 
         # Decorator options are resolved after restoring the enclosing import scope.
-        if self.annotation_kind(node.returns) != "@response" and not (endpoint.raw_returns and all(endpoint.raw_returns)):
+        if self.annotation_kind(node.returns) != "@response" and not (endpoint.saw_return and endpoint.all_returns_raw):
             for route in endpoint.routes:
 
                 # Each decorator may declare a different serialization contract.
                 if http.needs_response_model(route, self.qualified):
-                    self.findings.append(Finding.at(route, "SLOP011", "declare response_model explicitly for this JSON endpoint"))
+                    self.findings.append(Finding.at(route, "SLOP010", "declare response_model explicitly for this JSON endpoint"))
 
     visit_AsyncFunctionDef = visit_FunctionDef
 
@@ -89,14 +95,18 @@ class EndpointAnalyzer(BindingVisitor):
         """Keep nested returns separate and review only recognized HTTP routes."""
         if self.functions:
             endpoint = self.endpoints[self.functions[-1]]
-            endpoint.raw_returns.append(self.kind(node.value) == "@response")
+            endpoint.saw_return = True
+            raw_return = self.kind(node.value) == "@response"
+            endpoint.all_returns_raw = endpoint.all_returns_raw and raw_return
+
+            # Only route returns participate in response-policy checks.
             if endpoint.routes and not any(http.is_external(route) for route in endpoint.routes):
                 self.findings.extend(self.reconstructed_response(node, endpoint))
 
                 # Disabling a schema alone does not opt out of envelope checks.
                 if node.value is not None and self.kind(node.value) == "@envelope":
                     self.findings.append(
-                        Finding.at(node.value, "SLOP012", "return the API payload directly instead of a generic success envelope")
+                        Finding.at(node.value, "SLOP011", "return the API payload directly instead of a generic success envelope")
                     )
         self.generic_visit(node)
 
@@ -116,7 +126,7 @@ class EndpointAnalyzer(BindingVisitor):
             return [
                 Finding.at(
                     value,
-                    "SLOP016",
+                    "SLOP015",
                     "route already validates this response model; avoid reconstruction unless validation intentionally transforms it",
                 )
             ]

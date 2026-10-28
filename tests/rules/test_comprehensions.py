@@ -13,7 +13,7 @@ def test_deduplication_is_local_to_one_analysis() -> None:
     second = check_patterns(tree)
 
     # Assert
-    assert [finding.code for finding in first] == ["SLOP017"]
+    assert [finding.code for finding in first] == ["SLOP016"]
     assert second == first
 
 
@@ -24,7 +24,7 @@ def test_constructor_argument_dependency() -> None:
                   updated_at=max(member.updated_at, deleted_at or member.updated_at))
             for member in members]
     """
-    assert codes(source) == ["SLOP017"]
+    assert codes(source) == ["SLOP016"]
 
 
 def test_independent_binding_and_non_comprehension_are_allowed() -> None:
@@ -38,4 +38,4 @@ def test_independent_binding_and_non_comprehension_are_allowed() -> None:
 
 def test_generator_constructor_dependency() -> None:
     """Apply constructor-dependency checks to generator expressions too."""
-    assert codes("rows = (Audit(first=(value := source(item)), second=value) for item in items)") == ["SLOP017"]
+    assert codes("rows = (Audit(first=(value := source(item)), second=value) for item in items)") == ["SLOP016"]

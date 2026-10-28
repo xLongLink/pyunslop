@@ -9,7 +9,7 @@ if TYPE_CHECKING:
     from pyunslop.source import Source
     from pyunslop.contracts import QualifiedName
 
-CODE = "SLOP013"
+CODE = "SLOP012"
 CLI_HELP_APIS = {"argparse.ArgumentParser", "click.command", "click.group", "typer.Typer"}
 
 

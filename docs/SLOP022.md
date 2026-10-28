@@ -1,25 +1,22 @@
-# SLOP022: Review borrowed-client-only classes
+# SLOP022: Review immediate post-commit refreshes
 
-Review plain classes whose only state is a directly borrowed client and whose
-methods only use that field. Owned clients, extra state, inheritance,
-decorators, documented boundaries, properties, and lifecycle hooks are skipped.
-Namespaced functions may be simpler, but preserve meaningful ownership or API
-boundaries. The example assumes the class adds no intentional boundary.
+Review an immediate commit/refresh pair on the same recognized session. This
+does not prove the refresh redundant: inspect `expire_on_commit`, server-generated
+defaults, and required relationships before removing it. Other sessions and
+intervening work are not candidates. The good example applies only when no
+refreshed state is required.
 
 ```py
 # Bad
-class Users:
-    def __init__(self, client):
-        self.client = client
+from sqlalchemy.ext.asyncio import AsyncSession
 
-    def fetch(self):
-        return self.client.fetch_users()
-
-users = Users(client).fetch()
+async def save(session: AsyncSession, user):
+    await session.commit()
+    await session.refresh(user)
 
 # Good
-def fetch_users(client):
-    return client.fetch_users()
+from sqlalchemy.ext.asyncio import AsyncSession
 
-users = fetch_users(client)
+async def save(session: AsyncSession, user):
+    await session.commit()
 ```

@@ -8,7 +8,7 @@ from pyunslop.analysis.bindings import BindingVisitor
 if TYPE_CHECKING:
     from pyunslop.source import Source
 
-CODE = "SLOP015"
+CODE = "SLOP014"
 MODEL_BASES = {"pydantic.BaseModel", "pydantic.main.BaseModel", "pydantic.v1.BaseModel", "pydantic.v1.main.BaseModel"}
 MESSAGE = "order model fields from shortest name to longest within each section; review validation dependencies before reordering"
 
@@ -24,7 +24,7 @@ def is_field(statement: ast.stmt, context: BindingVisitor) -> bool:
     )
 
 
-def check_fields(node: ast.ClassDef, context: BindingVisitor) -> list[Finding]:
+def check_fields(node: ast.ClassDef, context: ModelAnalyzer) -> list[Finding]:
     """Review field-name lengths within directly recognized Pydantic models."""
     if not any(context.annotation(base) in MODEL_BASES for base in node.bases):
         return []
@@ -53,7 +53,8 @@ class ModelAnalyzer(BindingVisitor):
 
     def __init__(self, source: Source) -> None:
         """Retain source section boundaries alongside name bindings."""
-        super().__init__(source.text)
+        super().__init__()
+        self.source_lines = source.lines
         self.findings: list[Finding] = []
 
     def visit_ClassDef(self, node: ast.ClassDef) -> None:

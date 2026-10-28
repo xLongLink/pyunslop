@@ -1,21 +1,30 @@
-# SLOP010: Name domain instances
+# SLOP010: Explicit endpoint response schemas
 
-Assign `Postgres` and `Kubernetes` instances before calling their methods,
-including methods reached through attributes. Imported aliases and
-module-qualified constructors are recognized. This explicit class-name
-allowlist does not apply to other classes or ordinary fluent APIs.
+Declare `response_model` explicitly for recognized FastAPI JSON endpoints,
+even when a return annotation exists. Locally constructed or annotated routers
+and their import aliases are recognized; imported router instances are not
+inferred across files. HEAD routes, bodyless statuses, recognized raw responses,
+WebSockets, explicit `response_model=None`, and unknown `**route_options` are
+exempt. Selecting `JSONResponse` as the default response class is not an exemption.
 
 ```py
 # Bad
-from services import Postgres
+from fastapi import APIRouter
+from schemas import UserResponse
 
-async def inspect_database(config):
-    return await Postgres(config).usage()
+router = APIRouter()
+
+@router.get("/users")
+async def list_users() -> list[UserResponse]:
+    return await users.fetch()
 
 # Good
-from services import Postgres
+from fastapi import APIRouter
+from schemas import UserResponse
 
-async def inspect_database(config):
-    database = Postgres(config)
-    return await database.usage()
+router = APIRouter()
+
+@router.get("/users", response_model=list[UserResponse])
+async def list_users() -> list[UserResponse]:
+    return await users.fetch()
 ```

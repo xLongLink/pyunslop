@@ -19,7 +19,7 @@ def test_all_syntax_rule_families_are_included_without_rewriting() -> None:
             def fetch(self):
                 return self._client.fetch()
         usage = Postgres(host).usage()
-        total = sum([item.amount for item in items])
+        total = tuple([item.amount for item in items])
         rows = [Row(first=(value := item), second=value) for item in items]
         """)
     tree = ast.parse(source)
@@ -29,5 +29,5 @@ def test_all_syntax_rule_families_are_included_without_rewriting() -> None:
     findings = check_simplifications(Source(source, tree))
 
     # Assert
-    assert sorted(finding.code for finding in findings) == ["SLOP010", "SLOP017", "SLOP018", "SLOP021", "SLOP022", "SLOP024"]
+    assert sorted(finding.code for finding in findings) == ["SLOP009", "SLOP016", "SLOP017", "SLOP020", "SLOP021", "SLOP023"]
     assert ast.dump(tree) == before

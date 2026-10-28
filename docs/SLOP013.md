@@ -1,19 +1,19 @@
-# SLOP013: No leading module docstrings
+# SLOP013: Simplify single-case parametrization
 
-This fixed repository policy rejects leading module docstrings, not function
-or class docstrings. A module is exempt when its `__doc__` explicitly supplies
-`description`, `epilog`, or `help` to a recognized argparse, Click, or Typer API.
-Simply referencing `__doc__` is not an exemption.
+Replace a known pytest parametrization containing exactly one literal case
+when it adds no fixture or collection behavior. Dynamic cases, `pytest.param`,
+explicit IDs or scopes, indirect fixtures, tests using `request`, and modules
+with known collection hooks are preserved. Multiple cases are unaffected.
 
 ```py
 # Bad
-"""User lookup utilities."""
+import pytest
 
-def find_user(user_id):
-    return users.get(user_id)
+@pytest.mark.parametrize("value", [1])
+def test_positive(value):
+    assert value > 0
 
 # Good
-def find_user(user_id):
-    """Look up a user by identifier."""
-    return users.get(user_id)
+def test_positive():
+    assert 1 > 0
 ```

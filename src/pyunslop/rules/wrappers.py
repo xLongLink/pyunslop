@@ -8,7 +8,7 @@ if TYPE_CHECKING:
     from pyunslop.contracts import FunctionNode, QualifiedName
     from pyunslop.analysis.bindings import BindingVisitor
 
-CODE = "SLOP021"
+CODE = "SLOP020"
 
 
 def forwarded_function(node: FunctionNode) -> bool:

@@ -1,16 +1,23 @@
-# SLOP018: Review single-use list materialization
+# SLOP018: Prefer scalar query APIs
 
-Review simple list comprehensions consumed by built-in `sum`, `min`, `max`,
-`tuple`, `set`, or `frozenset`, including adjacent single-use temporary lists
-inside functions. Unknown consumers, short-circuiting `any`/`all`, visible
-calls or awaits, asynchronous comprehensions, filters, and reused snapshots are
-skipped. Properties may still have effects: preserve snapshot semantics and
-exception timing. The example uses already available numeric values.
+Review known `execute(...).scalars()` consumption and one-element row unpacking
+from syntactically single-selection queries. Prefer `session.scalars()` while
+preserving the original `one`, `one_or_none`, or other cardinality and null
+handling. Multi-column unpacking and unknown selection shapes are not simplified.
+This is a review candidate, not an automatic query rewrite.
 
 ```py
 # Bad
-total = sum([value * 2 for value in values])
+from sqlalchemy.ext.asyncio import AsyncSession
+
+async def fetch(session: AsyncSession):
+    result = await session.execute(statement)
+    return result.scalars().one_or_none()
 
 # Good
-total = sum(value * 2 for value in values)
+from sqlalchemy.ext.asyncio import AsyncSession
+
+async def fetch(session: AsyncSession):
+    result = await session.scalars(statement)
+    return result.one_or_none()
 ```

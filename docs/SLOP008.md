@@ -1,22 +1,18 @@
-# SLOP008: Iterate buffered results directly
+# SLOP008: Generators for SQL membership expressions
 
-Iterate recognized buffered query results rather than calling `all()` solely
-for a synchronous `for` loop. Streaming results, `yield_per`, asynchronous
-iteration, unknown result types, and materialized lists reused elsewhere are
-not candidates.
+Pass a generator rather than a single-use list comprehension to SQLAlchemy
+`.in_()`. Detection requires a recognized SQLAlchemy/SQLModel expression
+constructor or a known query expression context. Existing list variables and
+unrelated methods named `in_` are ignored.
 
 ```py
 # Bad
-from sqlalchemy.engine import Result
+from sqlalchemy import column
 
-def process(result: Result):
-    for row in result.all():
-        consume(row)
+condition = column("user_id").in_([member.user_id for member in members])
 
 # Good
-from sqlalchemy.engine import Result
+from sqlalchemy import column
 
-def process(result: Result):
-    for row in result:
-        consume(row)
+condition = column("user_id").in_(member.user_id for member in members)
 ```

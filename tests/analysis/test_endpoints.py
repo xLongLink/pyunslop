@@ -1,7 +1,9 @@
 import ast
 import pytest
 import textwrap
+from pytest_mock import MockerFixture
 from tests.support import codes, check_patterns
+from pyunslop.analysis.endpoints import EndpointAnalyzer
 
 EXTERNAL_PROTOCOL_OPTIONS = (
     "response_model=None, openapi_extra={'x-external-protocol': True}",
@@ -14,6 +16,7 @@ RAW_RESPONSE_BODIES = (
     "def endpoint() -> Raw:\n    return make_response()",
     "def endpoint():\n    return Raw(content=payload)",
     "def endpoint():\n    response = Raw(content=payload)\n    return response",
+    "def endpoint():\n    if condition:\n        return Raw(content=payload)\n    return Raw(content=other)",
 )
 
 
@@ -34,7 +37,7 @@ def test_success_envelope_return() -> None:
     async def users():
         return {'success': True, 'detail': 'Users fetched', 'data': users}
     """
-    assert codes(source) == ["SLOP012"]
+    assert codes(source) == ["SLOP011"]
 
 
 def test_named_and_dict_constructor_envelopes() -> None:
@@ -47,7 +50,7 @@ def test_named_and_dict_constructor_envelopes() -> None:
         payload = dict(success=True, data=users)
         return payload
     """
-    assert codes(source) == ["SLOP012"]
+    assert codes(source) == ["SLOP011"]
 
 
 def test_payloads_and_non_api_functions_are_ignored() -> None:
@@ -83,7 +86,7 @@ def test_none_schema_is_not_an_external_protocol_marker() -> None:
     def endpoint():
         return {'success': True, 'data': users}
     """
-    assert codes(source) == ["SLOP012"]
+    assert codes(source) == ["SLOP011"]
 
 
 def test_nested_non_route_return_is_not_an_api_return() -> None:
@@ -113,7 +116,7 @@ def test_response_model_exemptions_do_not_leak() -> None:
 
     # Assert
     assert exempt == []
-    assert [finding.code for finding in findings] == ["SLOP016"]
+    assert [finding.code for finding in findings] == ["SLOP015"]
 
 
 def test_raw_returns_belong_to_their_function() -> None:
@@ -135,7 +138,7 @@ def test_raw_returns_belong_to_their_function() -> None:
     findings = check_patterns(ast.parse(source))
 
     # Assert
-    assert [(finding.line, finding.code) for finding in findings] == [(6, "SLOP011")]
+    assert [(finding.line, finding.code) for finding in findings] == [(6, "SLOP010")]
 
 
 def test_json_endpoint_requires_explicit_schema() -> None:
@@ -147,7 +150,7 @@ def test_json_endpoint_requires_explicit_schema() -> None:
     async def users() -> list[UserResponse]:
         return fetch_users()
     """
-    assert codes(source) == ["SLOP011"]
+    assert codes(source) == ["SLOP010"]
 
 
 @pytest.mark.parametrize("model", ["list[UserResponse]", "None"])
@@ -179,18 +182,54 @@ def test_raw_response_annotation_or_return(body: str) -> None:
     assert codes(source) == []
 
 
-def test_mixed_raw_and_json_returns_require_schema() -> None:
+@pytest.mark.parametrize(("first", "last"), [("Response()", "{'users': users}"), ("{'users': users}", "Response()")])
+def test_mixed_raw_and_json_returns_require_schema(first: str, last: str) -> None:
     """Require schemas when at least one endpoint branch returns ordinary JSON."""
-    source = """
+    source = f"""
     from fastapi import FastAPI, Response
     app = FastAPI()
     @app.get('/')
     def endpoint():
         if condition:
-            return Response()
-        return {'users': users}
+            return {first}
+        return {last}
     """
-    assert codes(source) == ["SLOP011"]
+    assert codes(source) == ["SLOP010"]
+
+
+@pytest.mark.parametrize("body", ["pass", "return", "return None"])
+@pytest.mark.parametrize("definition", ["def", "async def"])
+def test_no_raw_return_requires_schema(body: str, definition: str) -> None:
+    """Keep implicit and explicit None returns outside the raw-response exemption."""
+    source = f"from fastapi import FastAPI\napp = FastAPI()\n@app.get('/')\n{definition} endpoint():\n    {body}\n"
+    assert codes(source) == ["SLOP010"]
+
+
+def test_completed_endpoint_contexts_are_released() -> None:
+    """Release nested contexts while preserving the outer raw-response exemption."""
+    source = textwrap.dedent("""\
+        from fastapi import FastAPI, Response
+        app = FastAPI()
+        @app.get('/')
+        def endpoint():
+            def helper():
+                return {'value': 1}
+            return Response()
+        """)
+    analyzer = EndpointAnalyzer()
+    analyzer.visit(ast.parse(source))
+    assert analyzer.findings == []
+    assert analyzer.endpoints == {}
+
+
+def test_failed_nested_visit_releases_endpoint_contexts(mocker: MockerFixture) -> None:
+    """Unwind both function contexts when inspecting a nested return fails."""
+    analyzer = EndpointAnalyzer()
+    mocker.patch.object(analyzer, "visit_Return", side_effect=RuntimeError("inspection failed"))
+    tree = ast.parse("def outer():\n    def inner():\n        return value\n")
+    with pytest.raises(RuntimeError, match="inspection failed"):
+        analyzer.visit(tree)
+    assert analyzer.endpoints == {}
 
 
 def test_unrelated_router_is_ignored() -> None:
@@ -215,7 +254,7 @@ def test_repeated_response_validation() -> None:
     async def me(user):
         return Output.model_validate(user)
     """
-    assert codes(source) == ["SLOP016"]
+    assert codes(source) == ["SLOP015"]
 
 
 @pytest.mark.parametrize("expression", VALIDATION_EXPRESSIONS)

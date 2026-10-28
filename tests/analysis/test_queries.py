@@ -20,25 +20,25 @@ def test_analysis_state_is_not_shared_between_files() -> None:
         "from sqlalchemy.ext.asyncio import AsyncSession\nasync def fetch(s: AsyncSession):\n    return (await s.execute(stmt)).all()\n"
     )
     unknown = ast.parse("async def fetch(s):\n    return (await s.execute(stmt)).all()\n")
-    assert [finding.code for finding in check_patterns(typed)] == ["SLOP005"]
+    assert [finding.code for finding in check_patterns(typed)] == ["SLOP004"]
     assert check_patterns(unknown) == []
 
     # Reusing the typed tree must not retain another file's provenance.
-    assert [finding.code for finding in check_patterns(typed)] == ["SLOP005"]
+    assert [finding.code for finding in check_patterns(typed)] == ["SLOP004"]
 
 
 @pytest.mark.parametrize("method", ["execute", "scalars"])
 def test_buffered_async_execute_and_scalars(method: str) -> None:
     """Avoid all() when buffered async-query results are consumed only by a loop."""
     source = f"from sqlalchemy.ext.asyncio import AsyncSession\nasync def fetch(s: AsyncSession):\n    result = await s.{method}(stmt)\n    for row in result.all():\n        consume(row)\n"
-    assert codes(source) == ["SLOP008"]
+    assert codes(source) == ["SLOP007"]
 
 
 @pytest.mark.parametrize("result_type", ["Result", "ScalarResult", "MappingResult", "CursorResult"])
 def test_buffered_result_annotations_and_transforms(result_type: str) -> None:
     """Retain buffering knowledge through known result annotations and transforms."""
     source = f"from sqlalchemy.engine import {result_type} as Rows\ndef consume(result: Rows):\n    for row in result.unique().all():\n        use(row)\n"
-    assert codes(source) == ["SLOP008"]
+    assert codes(source) == ["SLOP007"]
 
 
 def test_streaming_and_unknown_results_are_ignored() -> None:
@@ -90,7 +90,7 @@ def test_sqlmodel_col_and_import_aliases() -> None:
     from sqlmodel import col as column
     statement = column(User.id).in_([member.user_id for member in members])
     """
-    assert codes(source) == ["SLOP009"]
+    assert codes(source) == ["SLOP008"]
 
 
 def test_sqlalchemy_column() -> None:
@@ -99,7 +99,7 @@ def test_sqlalchemy_column() -> None:
     import sqlalchemy as sa
     expression = sa.column('id').in_([item.id for item in items])
     """
-    assert codes(source) == ["SLOP009"]
+    assert codes(source) == ["SLOP008"]
 
 
 def test_select_where_context() -> None:
@@ -109,7 +109,7 @@ def test_select_where_context() -> None:
     statement = select(User)
     statement = statement.where(User.id.in_([item.id for item in items]))
     """
-    assert codes(source) == ["SLOP009"]
+    assert codes(source) == ["SLOP008"]
 
 
 def test_generator_and_reused_list_are_allowed() -> None:
@@ -141,7 +141,7 @@ def test_scalar_api_preserves_cardinality() -> None:
         result = await s.execute(stmt)
         return result.scalars().one_or_none()
     """
-    assert codes(source) == ["SLOP019"]
+    assert codes(source) == ["SLOP018"]
 
 
 def test_single_column_unpacking() -> None:
@@ -154,7 +154,7 @@ def test_single_column_unpacking() -> None:
         for user, in result:
             consume(user)
     """
-    assert codes(source) == ["SLOP019"]
+    assert codes(source) == ["SLOP018"]
 
 
 def test_single_row_unpacking() -> None:
@@ -166,7 +166,7 @@ def test_single_row_unpacking() -> None:
         result = await s.execute(select(User))
         user, = result.one()
     """
-    assert codes(source) == ["SLOP019"]
+    assert codes(source) == ["SLOP018"]
 
 
 def test_multi_column_unpacking_is_preserved() -> None:
@@ -186,7 +186,7 @@ def test_multi_column_unpacking_is_preserved() -> None:
 def test_direct_existence_or_threshold_materialization(expression: str) -> None:
     """Review rows loaded directly for truth or threshold comparisons."""
     source = f"from sqlalchemy.ext.asyncio import AsyncSession\nasync def exists(s: AsyncSession):\n    result = await s.scalars(stmt)\n    return {expression}\n"
-    assert codes(source) == ["SLOP020"]
+    assert codes(source) == ["SLOP019"]
 
 
 def test_named_size_only_materialization() -> None:
@@ -198,7 +198,7 @@ def test_named_size_only_materialization() -> None:
         rows = result.all()
         return len(rows) >= threshold
     """
-    assert codes(source) == ["SLOP020"]
+    assert codes(source) == ["SLOP019"]
 
 
 def test_rows_used_as_data_are_preserved() -> None:
@@ -224,7 +224,7 @@ def test_immediate_refresh_candidate() -> None:
         await s.refresh(item)
         return item
     """
-    assert codes(source) == ["SLOP023"]
+    assert codes(source) == ["SLOP022"]
 
 
 def test_different_sessions_and_intervening_work_are_preserved() -> None:
@@ -253,7 +253,7 @@ def test_deduplication_is_local_to_one_analysis() -> None:
     second = check_patterns(tree)
 
     # Assert
-    assert [finding.code for finding in first] == ["SLOP006"]
+    assert [finding.code for finding in first] == ["SLOP005"]
     assert second == first
 
 
@@ -262,7 +262,7 @@ def test_deduplication_is_local_to_one_analysis() -> None:
 def test_slop005_query_methods_and_consumers(chain: str, method: str) -> None:
     """Detect unnamed results across query APIs and consuming method chains."""
     source = f"async def fetch(s: AsyncSession):\n    return (await s.{method}(stmt)).{chain}\n"
-    expected = ["SLOP019", "SLOP005"] if method == "execute" and chain == "scalars().all()" else ["SLOP005"]
+    expected = ["SLOP018", "SLOP004"] if method == "execute" and chain == "scalars().all()" else ["SLOP004"]
     assert query_codes(source) == expected
 
 
@@ -280,7 +280,7 @@ def test_named_result_is_allowed() -> None:
 def test_slop006_list_contract_on_direct_query_return(expression: str) -> None:
     """Recommend sequence return types for direct query-row returns."""
     source = f"async def fetch(s: AsyncSession) -> list[User]:\n    result = await s.scalars(stmt)\n    return {expression}\n"
-    assert query_codes(source) == ["SLOP006"]
+    assert query_codes(source) == ["SLOP005"]
 
 
 def test_slop006_typing_list_alias_and_string_annotation() -> None:
@@ -291,7 +291,7 @@ def test_slop006_typing_list_alias_and_string_annotation() -> None:
         result = await s.execute(stmt)
         return list(result.scalars().all())
     """
-    assert query_codes(source) == ["SLOP006", "SLOP019"]
+    assert query_codes(source) == ["SLOP005", "SLOP018"]
 
 
 def test_slop006_reports_once_per_function() -> None:
@@ -303,14 +303,14 @@ def test_slop006_reports_once_per_function() -> None:
             return list(result.all())
         return result.all()
     """
-    assert query_codes(source) == ["SLOP006"]
+    assert query_codes(source) == ["SLOP005"]
 
 
 @pytest.mark.parametrize("statement", SEQUENCE_CONSUMERS)
 def test_slop007_sequence_return_and_assignment(statement: str) -> None:
     """Detect redundant copies in assignments and sequence-compatible returns."""
     source = f"async def fetch(s: AsyncSession) -> Sequence[User]:\n    result = await s.scalars(stmt)\n    {statement}\n"
-    assert query_codes(source) == ["SLOP007"]
+    assert query_codes(source) == ["SLOP006"]
 
 
 @pytest.mark.parametrize("statement", MUTABLE_CONSUMERS)

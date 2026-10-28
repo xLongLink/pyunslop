@@ -69,31 +69,31 @@ NESTED_REFERENCES = (
 @pytest.mark.parametrize("literal", LITERAL_VALUES)
 def test_local_literals(literal: str) -> None:
     """Include signed numbers and recursively immutable tuples."""
-    assert codes(f"def run():\n    VALUE = {literal}\n    return consume(VALUE)\n") == ["SLOP024"]
+    assert codes(f"def run():\n    VALUE = {literal}\n    return consume(VALUE)\n") == ["SLOP023"]
 
 
 def test_private_module_constant_and_location() -> None:
     """Point the warning at the redundant binding."""
     source = "_TIMEOUT = 30\nconnect(timeout=_TIMEOUT)\n"
     findings = check_patterns(ast.parse(source))
-    assert [(finding.line, finding.column, finding.code) for finding in findings] == [(1, 1, "SLOP024")]
+    assert [(finding.line, finding.column, finding.code) for finding in findings] == [(1, 1, "SLOP023")]
 
 
 def test_async_function() -> None:
     """Apply the same check to async function bodies."""
-    assert codes("async def run():\n    TIMEOUT = 30\n    await connect(timeout=TIMEOUT)\n") == ["SLOP024"]
+    assert codes("async def run():\n    TIMEOUT = 30\n    await connect(timeout=TIMEOUT)\n") == ["SLOP023"]
 
 
 def test_same_line_statement_order() -> None:
     """Accept later semicolon statements but not reads before the binding."""
-    assert codes("_TIMEOUT = 30; connect(timeout=_TIMEOUT)\n") == ["SLOP024"]
+    assert codes("_TIMEOUT = 30; connect(timeout=_TIMEOUT)\n") == ["SLOP023"]
     assert codes("connect(timeout=_TIMEOUT); _TIMEOUT = 30\n") == []
 
 
 def test_method_local_constant() -> None:
     """Distinguish method locals from class-level contracts."""
     source = "class Client:\n    def connect(self):\n        TIMEOUT = 30\n        return connect(timeout=TIMEOUT)\n"
-    assert codes(source) == ["SLOP024"]
+    assert codes(source) == ["SLOP023"]
 
 
 def test_independent_scopes() -> None:
@@ -106,7 +106,7 @@ def test_independent_scopes() -> None:
         VALUE = 2
         return VALUE
     """
-    assert codes(source) == ["SLOP024", "SLOP024"]
+    assert codes(source) == ["SLOP023", "SLOP023"]
 
 
 @pytest.mark.parametrize("source", EXPORTED_CONSTANTS)

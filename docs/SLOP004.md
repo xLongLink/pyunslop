@@ -1,16 +1,21 @@
-# SLOP004: No suppression directives
+# SLOP004: Name asynchronous query results
 
-Do not use bare or code-specific `noqa` directives, including file-wide
-`ruff: noqa` and `flake8: noqa` forms and case variants. Detection uses real
-comment tokens, not string contents. These directives cannot suppress pyunslop
-findings. Fix the issue where appropriate; keep legitimate warnings visible rather than adding
-another bypass. Findings remain warning-only.
+Assign an awaited SQLAlchemy or SQLModel query result before consuming it.
+Recognition requires known imports, annotations, constructors, factories, or
+local provenance; a variable merely named `session` is insufficient. Scalar
+value APIs such as `session.scalar()` are not result objects.
 
 ```py
 # Bad
-import os  # noqa: F401
-value = 1
+from sqlalchemy.ext.asyncio import AsyncSession
+
+async def fetch(session: AsyncSession):
+    return (await session.execute(statement)).scalars().all()
 
 # Good
-value = 1
+from sqlalchemy.ext.asyncio import AsyncSession
+
+async def fetch(session: AsyncSession):
+    result = await session.execute(statement)
+    return result.scalars().all()
 ```

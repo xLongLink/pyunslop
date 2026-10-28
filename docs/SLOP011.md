@@ -1,11 +1,11 @@
-# SLOP011: Explicit endpoint response schemas
+# SLOP011: Return endpoint payloads directly
 
-Declare `response_model` explicitly for recognized FastAPI JSON endpoints,
-even when a return annotation exists. Locally constructed or annotated routers
-and their import aliases are recognized; imported router instances are not
-inferred across files. HEAD routes, bodyless statuses, recognized raw responses,
-WebSockets, explicit `response_model=None`, and unknown `**route_options` are
-exempt. Selecting `JSONResponse` as the default response class is not an exemption.
+Avoid generic success envelopes in recognized FastAPI routes. Detection
+requires literal `success=True` plus `detail` or `data`, including direct
+dictionaries, `dict()` constructors, and locally assigned envelopes. An explicit
+`openapi_extra={"x-external-protocol": True}` contract is exempt;
+`response_model=None` alone is not. Ordinary payloads and non-route functions
+are ignored. Preserve required external protocol contracts.
 
 ```py
 # Bad
@@ -14,9 +14,9 @@ from schemas import UserResponse
 
 router = APIRouter()
 
-@router.get("/users")
-async def list_users() -> list[UserResponse]:
-    return await users.fetch()
+@router.get("/users", response_model=list[UserResponse])
+async def list_users():
+    return {"success": True, "detail": "Users fetched", "data": await users.fetch()}
 
 # Good
 from fastapi import APIRouter
@@ -25,6 +25,6 @@ from schemas import UserResponse
 router = APIRouter()
 
 @router.get("/users", response_model=list[UserResponse])
-async def list_users() -> list[UserResponse]:
+async def list_users():
     return await users.fetch()
 ```

@@ -1,25 +1,19 @@
-# SLOP020: Review size-only row loading
+# SLOP020: Review transparent wrappers
 
-Review recognized query rows materialized solely for `len`, `bool`, or truth
-testing, including local row variables whose only uses are size or truth checks.
-Consider an existence or bounded query, but preserve locking, transaction
-behavior, and threshold semantics. The checker does not rewrite SQL. The good
-example assumes no row-locking or row-loading side effects are required.
+Review exact private positional forwarding functions and private empty
+subclasses, plus empty FastAPI/Starlette test-client subclasses. Public
+functions, typed or documented contracts, decorators, inherited framework
+methods, and subclasses adding behavior are exempt. Preserve meaningful
+compatibility, lifecycle, or framework boundaries. Only remove a wrapper after
+checking its callers; the example assumes no such boundary is needed.
 
 ```py
 # Bad
-from sqlalchemy import select
-from sqlalchemy.ext.asyncio import AsyncSession
+def _fetch(value):
+    return fetch(value)
 
-async def has_users(session: AsyncSession):
-    result = await session.execute(select(User))
-    return bool(result.all())
+result = _fetch(value)
 
 # Good
-from sqlalchemy import select
-from sqlalchemy.ext.asyncio import AsyncSession
-
-async def has_users(session: AsyncSession):
-    statement = select(select(User.id).exists())
-    return bool(await session.scalar(statement))
+result = fetch(value)
 ```
