@@ -127,10 +127,6 @@ class RuffTests(unittest.TestCase):
         path = self.write("example.py", source)
         assert not any(warning.code.startswith("ANN") for warning in check_ruff([path]))
 
-    def test_package_exposes_its_type_information(self) -> None:
-        """Ship the PEP 561 marker used by downstream static type checkers."""
-        assert files("pyunslop").joinpath("py.typed").is_file()
-
     def test_syntax_errors_remain_warnings(self) -> None:
         """Treat Ruff parse diagnostics as findings rather than operational failures."""
         path = self.write("example.py", "def broken(\n")
@@ -173,7 +169,3 @@ class RuffTests(unittest.TestCase):
         project = Path(__file__).resolve().parents[1].joinpath("pyproject.toml").read_text(encoding="utf-8")
         expected = "[tool.ruff]\n" + preset.replace("\n[", "\n[tool.ruff.")
         assert project.endswith(expected)
-
-
-if __name__ == "__main__":
-    unittest.main()

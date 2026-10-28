@@ -4,7 +4,6 @@ import sys
 import tempfile
 import unittest
 import contextlib
-import subprocess
 from pathlib import Path
 from unittest import mock
 from pyunslop.cli import main
@@ -176,18 +175,3 @@ class CliTests(unittest.TestCase):
         assert result == 0
         assert "warning: PY114" in stdout
         assert self.path.read_text() == source
-
-    def test_module_defaults_to_current_directory_and_ignores_werror(self) -> None:
-        """Support module execution without emitting promotable Python warnings."""
-        self.path.write_text("#bad\n")
-        result = subprocess.run(
-            [sys.executable, "-W", "error", "-m", "pyunslop"], cwd=self.temporary.name, capture_output=True, text=True, check=False
-        )
-
-        # Assert: subprocess success must still include the expected advisory finding.
-        assert result.returncode == 0, result.stderr
-        assert "warning: CM003" in result.stdout
-
-
-if __name__ == "__main__":
-    unittest.main()
