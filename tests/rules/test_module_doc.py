@@ -1,4 +1,5 @@
 import ast
+import pytest
 from tests.support import codes, check_patterns
 
 
@@ -38,3 +39,35 @@ def test_merely_referencing_doc_is_not_cli_help() -> None:
     """Require a recognized CLI-help use rather than any reference to __doc__."""
     source = '"""Module docs."""\nprint(__doc__)\n'
     assert codes(source) == ["SLOP012"]
+
+
+@pytest.mark.parametrize("revises", ["", "abc123", "abc123, def456"])
+@pytest.mark.parametrize("date", ["2026-10-28 12:34:56", "2026-10-28 12:34:56.123456"])
+def test_alembic_revision_header_exemption(revises: str, date: str) -> None:
+    """Allow generated headers for initial, ordinary, and merge revisions."""
+    source = f'''\
+    """Create accounts.
+
+    Revision ID: abc789
+    Revises: {revises}
+    Create Date: {date}
+
+    """
+    '''
+    assert codes(source) == []
+
+
+# A date alone or an incomplete header must not bypass the policy.
+@pytest.mark.parametrize(
+    "header",
+    [
+        "2026-10-28 Create accounts.",
+        "Create Date: 2026-10-28 12:34:56",
+        "Revision ID: abc789\nRevises: abc123",
+        "Revision ID: abc789\nRevises: abc123\nCreate Date: not a date",
+        "Revision ID: \nRevises: abc123\nCreate Date: 2026-10-28 12:34:56",
+    ],
+)
+def test_other_dated_docstrings_are_not_exempt(header: str) -> None:
+    """Require a complete revision header rather than just a date."""
+    assert codes(f'"""{header}"""') == ["SLOP012"]

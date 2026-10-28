@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import re
 import ast
 from typing import TYPE_CHECKING
 from pyunslop.diagnostics import Finding
@@ -11,6 +12,12 @@ if TYPE_CHECKING:
 
 CODE = "SLOP012"
 CLI_HELP_APIS = {"argparse.ArgumentParser", "click.command", "click.group", "typer.Typer"}
+ALEMBIC_HEADER = re.compile(
+    r"^Revision ID:[ \t]+\S+[ \t]*\n"
+    r"Revises:[^\n]*\n"
+    r"Create Date:[ \t]+\d{4}-\d{2}-\d{2}[ \t]+\d{2}:\d{2}:\d{2}(?:\.\d+)?[ \t]*$",
+    re.MULTILINE,
+)
 
 
 def uses_cli_doc(call: ast.Call, qualified: QualifiedName) -> bool:
@@ -37,8 +44,9 @@ class ModuleDocAnalyzer(BindingVisitor):
 
 
 def check_module_doc(source: Source) -> list[Finding]:
-    """Reject module documentation unless it supplies recognized CLI help."""
-    if ast.get_docstring(source.tree) is None:
+    """Allow Alembic revision headers and documentation consumed by CLI help."""
+    doc = ast.get_docstring(source.tree)
+    if doc is None or ALEMBIC_HEADER.search(doc):
         return []
     analyzer = ModuleDocAnalyzer()
     analyzer.visit(source.tree)
