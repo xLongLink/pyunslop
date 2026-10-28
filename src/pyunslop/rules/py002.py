@@ -10,19 +10,26 @@ if TYPE_CHECKING:
 CODE = "PY002"
 
 
-def check(node: ast.Return, context: AnalysisVisitor) -> None:
-    """Recommend a sequence contract for directly returned query rows."""
-    if not context.functions:
-        return
-    function = context.functions[-1]
-    contract = context.annotation(function.returns)
+class Rule:
+    """Report each function's return contract at most once."""
 
-    # Point to the contract once, even when several returns have the same issue.
-    if (
-        contract in {"list", "typing.List"}
-        and (context.kind(node.value) == "@rows" or is_copy(node.value, context))
-        and id(function) not in context.reported_returns
-        and function.returns is not None
-    ):
-        context.reported_returns.add(id(function))
-        context.findings.append((function.returns, CODE, "use Sequence[T] for a read-only query-result return type"))
+    def __init__(self) -> None:
+        """Start with no reported contracts for this file."""
+        self.reported_returns: set[int] = set()
+
+    def check(self, node: ast.Return, context: AnalysisVisitor) -> None:
+        """Recommend a sequence contract for directly returned query rows."""
+        if not context.functions:
+            return
+        function = context.functions[-1]
+        contract = context.annotation(function.returns)
+
+        # Point to the contract once, even when several returns have the same issue.
+        if (
+            contract in {"list", "typing.List"}
+            and (context.kind(node.value) == "@rows" or is_copy(node.value, context))
+            and id(function) not in self.reported_returns
+            and function.returns is not None
+        ):
+            self.reported_returns.add(id(function))
+            context.findings.append((function.returns, CODE, "use Sequence[T] for a read-only query-result return type"))

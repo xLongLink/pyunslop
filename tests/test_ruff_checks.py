@@ -5,8 +5,8 @@ import unittest
 import subprocess
 from pathlib import Path
 from unittest import mock
+from pyunslop.ruff import check_ruff
 from importlib.resources import files
-from pyunslop.ruff_checks import check_ruff
 
 
 class RuffTests(unittest.TestCase):
@@ -121,7 +121,7 @@ class RuffTests(unittest.TestCase):
     def test_no_files_does_not_scan_the_current_directory(self) -> None:
         """Avoid Ruff's implicit directory scan when the input set is empty."""
         self.write("example.py", "import os\n")
-        with mock.patch("pyunslop.ruff_runner.subprocess.run") as run:
+        with mock.patch("pyunslop.ruff.subprocess.run") as run:
             assert check_ruff([]) == []
         run.assert_not_called()
 
@@ -142,7 +142,7 @@ class RuffTests(unittest.TestCase):
         message = ""
 
         # Nonzero exits without diagnostics must not be mistaken for ordinary findings.
-        with mock.patch("pyunslop.ruff_runner.subprocess.run", return_value=failed):
+        with mock.patch("pyunslop.ruff.subprocess.run", return_value=failed):
             try:
                 check_ruff([path])
             except RuntimeError as error:

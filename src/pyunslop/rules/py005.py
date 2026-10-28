@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import ast
 from typing import TYPE_CHECKING
+from ..queries import EXPRESSION_FUNCTIONS
 
 if TYPE_CHECKING:
     from ..analysis import AnalysisVisitor
@@ -13,7 +14,7 @@ def in_expression_context(context: AnalysisVisitor) -> bool:
     """Recognize SQL expression parents without crossing unrelated consumers."""
     for parent in reversed(context.parents[:-1]):
         if isinstance(parent, ast.Call):
-            if context.qualified(parent.func) in context.EXPRESSION_FUNCTIONS:
+            if context.qualified(parent.func) in EXPRESSION_FUNCTIONS:
                 return True
 
             # Stop at the first enclosing call, even when it is not a SQL API.

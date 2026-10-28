@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import ast
 from typing import TYPE_CHECKING
+from ..queries import EXECUTE_RESULTS
 
 if TYPE_CHECKING:
     from ..analysis import AnalysisVisitor
@@ -12,7 +13,7 @@ CODE = "PY108"
 
 def check_call(node: ast.Call, context: AnalysisVisitor) -> None:
     """Prefer scalar query APIs while retaining existing cardinality consumers."""
-    if isinstance(node.func, ast.Attribute) and node.func.attr == "scalars" and context.kind(node.func.value) in context.EXECUTE_RESULTS:
+    if isinstance(node.func, ast.Attribute) and node.func.attr == "scalars" and context.kind(node.func.value) in EXECUTE_RESULTS:
         context.findings.append(
             (node, CODE, "use session.scalars() instead of execute().scalars(); preserve one()/one_or_none() cardinality checks")
         )

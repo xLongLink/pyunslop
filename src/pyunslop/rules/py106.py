@@ -43,11 +43,18 @@ def comprehension_dependencies(node: ComprehensionNode) -> list[ast.NamedExpr]:
     return findings
 
 
-def check(node: ComprehensionNode, context: AnalysisVisitor) -> None:
-    """Recommend explicit loops for dependent constructor walrus bindings."""
-    for binding in comprehension_dependencies(node):
-        if id(binding) not in context.reported_bindings:
-            context.reported_bindings.add(id(binding))
-            context.findings.append(
-                (binding, CODE, "use an explicit loop when a comprehension's constructor arguments depend on a walrus binding")
-            )
+class Rule:
+    """Deduplicate bindings reached through nested comprehensions."""
+
+    def __init__(self) -> None:
+        """Start with no reported bindings for this file."""
+        self.reported_bindings: set[int] = set()
+
+    def check(self, node: ComprehensionNode, context: AnalysisVisitor) -> None:
+        """Recommend explicit loops for dependent constructor walrus bindings."""
+        for binding in comprehension_dependencies(node):
+            if id(binding) not in self.reported_bindings:
+                self.reported_bindings.add(id(binding))
+                context.findings.append(
+                    (binding, CODE, "use an explicit loop when a comprehension's constructor arguments depend on a walrus binding")
+                )

@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import ast
-from ..api import is_raw_response
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
@@ -10,6 +9,29 @@ if TYPE_CHECKING:
 
 CODE = "PY009"
 BODYLESS_STATUS_NAMES = {"CONTINUE", "SWITCHING_PROTOCOLS", "PROCESSING", "EARLY_HINTS", "NO_CONTENT", "RESET_CONTENT", "NOT_MODIFIED"}
+RAW_RESPONSE_NAMES = {
+    "Response",
+    "StreamingResponse",
+    "RedirectResponse",
+    "FileResponse",
+    "PlainTextResponse",
+    "HTMLResponse",
+    # Direct JSONResponse objects bypass serialization, unlike the default response class.
+    "JSONResponse",
+    "ORJSONResponse",
+    "UJSONResponse",
+}
+
+
+def annotation_kind(name: str) -> str:
+    """Recognize response types that bypass FastAPI response serialization."""
+    module, _, symbol = name.rpartition(".")
+    return "@response" if module in {"fastapi", "fastapi.responses", "starlette.responses"} and symbol in RAW_RESPONSE_NAMES else ""
+
+
+def kind(node: ast.AST, context: AnalysisVisitor) -> str:
+    """Recognize constructed raw responses while their aliases are in scope."""
+    return annotation_kind(context.qualified(node.func)) if isinstance(node, ast.Call) else ""
 
 
 def is_bodyless_status(node: ast.AST | None, qualified: QualifiedName) -> bool:
@@ -37,7 +59,7 @@ def needs_response_model(route: ast.Call, qualified: QualifiedName) -> bool:
 
     # Selecting FastAPI's JSON default does not itself declare a schema.
     response_class = qualified(values.get("response_class"))
-    if is_raw_response(response_class) and response_class.rsplit(".", 1)[-1] not in {"JSONResponse", "ORJSONResponse", "UJSONResponse"}:
+    if annotation_kind(response_class) and response_class.rsplit(".", 1)[-1] not in {"JSONResponse", "ORJSONResponse", "UJSONResponse"}:
         return False
 
     # api_route can describe a HEAD-only endpoint without a .head decorator.
@@ -49,11 +71,27 @@ def needs_response_model(route: ast.Call, qualified: QualifiedName) -> bool:
     return True
 
 
-def check(node: FunctionNode, context: AnalysisVisitor) -> None:
-    """Require explicit JSON response schemas after analyzing endpoint returns."""
-    returns = context.raw_returns[id(node)]
-    if context.annotation_kind(node.returns) == "@response" or (returns and all(returns)):
-        return
-    for route in context.routes[id(node)]:
-        if needs_response_model(route, context.qualified):
-            context.findings.append((route, CODE, "declare response_model explicitly for this JSON endpoint"))
+class Rule:
+    """Collect raw-return exemptions independently for each endpoint."""
+
+    def __init__(self) -> None:
+        """Start without return provenance for this file."""
+        self.raw_returns: dict[int, list[bool]] = {}
+
+    def check_function(self, node: FunctionNode, _context: AnalysisVisitor) -> None:
+        """Initialize return tracking before entering a function body."""
+        self.raw_returns[id(node)] = []
+
+    def check_return(self, node: ast.Return, context: AnalysisVisitor) -> None:
+        """Keep nested functions' returns separate from their enclosing endpoint."""
+        if context.functions:
+            self.raw_returns[id(context.functions[-1])].append(context.kind(node.value) == "@response")
+
+    def check(self, node: FunctionNode, context: AnalysisVisitor) -> None:
+        """Require explicit JSON response schemas after analyzing endpoint returns."""
+        returns = self.raw_returns[id(node)]
+        if context.annotation_kind(node.returns) == "@response" or (returns and all(returns)):
+            return
+        for route in context.routes[id(node)]:
+            if needs_response_model(route, context.qualified):
+                context.findings.append((route, CODE, "declare response_model explicitly for this JSON endpoint"))

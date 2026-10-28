@@ -394,14 +394,14 @@ apply to the library API. File discovery raises `OSError` for missing paths or
 traversal errors. Explicit library file paths are checked even inside excluded
 directories, and overlapping discovery paths are deduplicated.
 For the same batched Ruff checks used by the CLI, call
-`pyunslop.ruff_checks.check_ruff(paths)` with a list of discovered files, from
+`pyunslop.ruff.check_ruff(paths)` with a list of discovered files, from
 the project root. It returns the same warning objects; Ruff engine failures
 raise `RuntimeError`.
 
 ```python
 from pathlib import Path
 from pyunslop import find_python_files
-from pyunslop.ruff_checks import check_ruff
+from pyunslop.ruff import check_ruff
 
 for warning in check_ruff(list(find_python_files([Path(".")]))):
     print(warning)
@@ -425,5 +425,10 @@ python -m unittest discover -s tests -v
 Each native rule is implemented in its own module under `src/pyunslop/rules/`,
 such as `cm001.py`, `py009.py`, and `py114.py`. The fixed registry in
 `rules/__init__.py` connects rules to shared AST traversal in `analysis.py` and
-lexical facts in `source.py`. `rfmt001.py` owns formatter warning handling;
+lexical facts in `source.py`. Stateful rules get a fresh instance for each file;
+their exemptions, deduplication, and collection hooks stay in the rule module.
+`queries.py` holds query provenance shared by several rules, while `api.py`
+holds shared route recognition. Comment counting and continuation exemptions
+belong to their respective comment rules, not the source tokenizer.
+`ruff.py` owns Ruff execution and formatter warning handling;
 Ruff's lint rules remain delegated to the pinned Ruff engine.

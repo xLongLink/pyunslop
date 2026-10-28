@@ -3,7 +3,10 @@ import subprocess  # noqa: S404
 from typing import TypedDict, cast
 from pathlib import Path
 from .checker import Warning as CheckWarning
+from dataclasses import replace
+from collections.abc import Iterable
 from importlib.metadata import PackageNotFoundError, distribution
+from importlib.resources import files, as_file
 
 
 class RuffLocation(TypedDict):
@@ -51,8 +54,26 @@ def run_ruff(command: str, config: Path, paths: list[Path]) -> list[CheckWarning
     if not isinstance(diagnostics, list) or (result.returncode not in {0, 1} and not diagnostics):
         raise RuntimeError(f"Ruff {command} failed: {result.stderr.strip()}")
 
-    # Rule-specific interpretation belongs to the caller, not the process runner.
     return [
         CheckWarning(Path(item["filename"]), item["location"]["row"], item["location"]["column"], item["code"], item["message"])
         for item in cast(list[RuffDiagnostic], diagnostics)
     ]
+
+
+def check_ruff(paths: Iterable[Path]) -> list[CheckWarning]:
+    """Return fixed-preset Ruff lint and formatting warnings without modifying files."""
+    paths = list(paths)
+    warnings: list[CheckWarning] = []
+    if not paths:
+        return warnings
+
+    # Batching keeps explicit file arguments below platform command-line limits.
+    with as_file(files("pyunslop").joinpath("ruff.toml")) as config:
+        for offset in range(0, len(paths), 64):
+            batch = paths[offset : offset + 64]
+            warnings.extend(run_ruff("check", config, batch))
+            warnings.extend(
+                replace(warning, code="RFMT001") if warning.code == "unformatted" else warning
+                for warning in run_ruff("format", config, batch)
+            )
+    return warnings

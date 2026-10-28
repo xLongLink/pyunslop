@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import ast
 from typing import TYPE_CHECKING
+from ..queries import BUFFERED_RESULTS
 
 if TYPE_CHECKING:
     from ..analysis import AnalysisVisitor
@@ -21,6 +22,6 @@ def check(node: LoopNode, context: AnalysisVisitor) -> None:
         and isinstance(iterable.func, ast.Attribute)
         and iterable.func.attr == "all"
         # Unknown or streaming result types must retain their materialization semantics.
-        and context.kind(iterable.func.value) in context.BUFFERED_RESULTS
+        and context.kind(iterable.func.value) in BUFFERED_RESULTS
     ):
         context.findings.append((iterable, CODE, "iterate the buffered query result directly instead of calling all()"))

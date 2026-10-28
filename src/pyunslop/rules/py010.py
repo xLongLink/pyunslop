@@ -38,6 +38,11 @@ def is_success_envelope(node: ast.AST | None, qualified: QualifiedName) -> bool:
     return isinstance(success, ast.Constant) and success.value is True and bool({"detail", "data"} & fields.keys())
 
 
+def kind(node: ast.AST, context: AnalysisVisitor) -> str:
+    """Propagate known envelopes through the shared local binding tracker."""
+    return "@envelope" if is_success_envelope(node, context.qualified) else ""
+
+
 def check(node: ast.Return, context: AnalysisVisitor) -> None:
     """Review API envelopes while preserving explicit external protocols."""
     if not context.functions:

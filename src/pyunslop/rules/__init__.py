@@ -55,25 +55,40 @@ if TYPE_CHECKING:
             "call": tuple[Callable[[ast.Call, AnalysisVisitor], None], ...],
             "comprehension": tuple[Callable[[ComprehensionNode, AnalysisVisitor], None], ...],
             "expression": tuple[Callable[[ast.Expr, AnalysisVisitor], None], ...],
+            "kind": tuple[Callable[[ast.AST, AnalysisVisitor], str], ...],
+            "annotation": tuple[Callable[[str], str], ...],
         },
     )
 
 COMMENT_RULES: tuple[Callable[[Source], list[CommentFinding]], ...] = (cm001.check, cm002.check, cm003.check)
 
-# Event order preserves finding order and the scope in which each rule is evaluated.
-AST_RULES: RuleRegistry = {
-    "module": (py114.check,),
-    "module_exit": (py014.check,),
-    "function": (py114.check, py015.check, py110.check_function),
-    "function_exit": (py009.check,),
-    "class": (py017.check, py110.check_class, py111.check),
-    # Evaluate binding-sensitive rules before their enclosing visitor updates aliases.
-    "import": (py013.check, py016.check),
-    "assign": (py107.check_assign, py108.check_assign),
-    "for": (py004.check, py108.check_for),
-    "attribute": (py001.check,),
-    "return": (py101.check, py010.check, py002.check),
-    "call": (py003.check, py005.check, py006.check, py108.check_call, py109.check, py107.check_call),
-    "comprehension": (py106.check,),
-    "expression": (py113.check,),
-}
+
+def ast_rules() -> RuleRegistry:
+    """Build the fixed registry with fresh rule-owned state for each file."""
+    sequence = py002.Rule()
+    schema = py009.Rule()
+    module_doc = py014.Rule()
+    parametrization = py015.Rule()
+    validation = py101.Rule()
+    walrus = py106.Rule()
+
+    # Event order preserves finding order and the original alias scope.
+    return {
+        "module": (py114.check, parametrization.check_module),
+        "module_exit": (module_doc.check,),
+        "function": (py114.check, parametrization.check, py110.check_function, schema.check_function, validation.check_function),
+        "function_exit": (schema.check,),
+        "class": (validation.check_class, py017.check, py110.check_class, py111.check),
+        # Binding-sensitive checks run before the visitor updates local aliases.
+        "import": (py013.check, py016.check),
+        "assign": (py107.check_assign, py108.check_assign),
+        "for": (py004.check, py108.check_for),
+        "attribute": (py001.check,),
+        "return": (schema.check_return, validation.check, py010.check, sequence.check),
+        "call": (module_doc.check_call, py003.check, py005.check, py006.check, py108.check_call, py109.check, py107.check_call),
+        "comprehension": (walrus.check,),
+        "expression": (py113.check,),
+        # Classifiers contribute provenance without taking over scope traversal.
+        "kind": (py010.kind, py009.kind),
+        "annotation": (py009.annotation_kind,),
+    }

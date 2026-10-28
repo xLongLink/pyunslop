@@ -5,14 +5,14 @@ from pathlib import Path
 from pyunslop import check_file
 from unittest import mock
 from importlib import import_module
-from pyunslop.rules import AST_RULES, COMMENT_RULES
+from pyunslop.rules import COMMENT_RULES, ast_rules
 from pyunslop.analysis import check_patterns
 from importlib.resources import files
 
 RULE_CODES = frozenset(
     (
         "CM001 CM002 CM003 PY001 PY002 PY003 PY004 PY005 PY006 PY009 PY010 PY013 PY014 "
-        "PY015 PY016 PY017 PY101 PY106 PY107 PY108 PY109 PY110 PY111 PY113 PY114 RFMT001"
+        "PY015 PY016 PY017 PY101 PY106 PY107 PY108 PY109 PY110 PY111 PY113 PY114"
     ).split()
 )
 
@@ -21,7 +21,7 @@ class RuleLayoutTests(unittest.TestCase):
     """Keep each native rule implementation independently owned and registered."""
 
     def test_each_rule_has_its_own_module(self) -> None:
-        """Require one code-named module per built-in rule, including formatting."""
+        """Require one code-named module per native rule."""
         modules = {path.name[:-3] for path in files("pyunslop.rules").iterdir() if path.name.endswith(".py") and path.name != "__init__.py"}
         assert modules == {code.lower() for code in RULE_CODES}
         for code in RULE_CODES:
@@ -30,9 +30,9 @@ class RuleLayoutTests(unittest.TestCase):
 
     def test_every_native_rule_is_in_the_fixed_registry(self) -> None:
         """Prevent extracting a rule into an unused or duplicate implementation."""
-        checks = [*COMMENT_RULES, *(check for checks in AST_RULES.values() for check in checks)]
+        checks = [*COMMENT_RULES, *(check for checks in ast_rules().values() for check in checks)]
         modules = {check.__module__.rsplit(".", 1)[-1] for check in checks}
-        assert modules == {code.lower() for code in RULE_CODES - {"RFMT001"}}
+        assert modules == {code.lower() for code in RULE_CODES}
         assert all(check.__module__.startswith("pyunslop.rules.") for check in checks)
 
     def test_one_source_parse_feeds_all_native_rules(self) -> None:
