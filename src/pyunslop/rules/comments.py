@@ -31,16 +31,22 @@ def is_literal_value(node: ast.AST) -> bool:
 
 
 def counted_lines(source: Source) -> tuple[set[int], set[int]]:
-    """Collapse literal data, exclude imports, and locate function resets."""
+    """Collapse literal data and signatures, exclude imports, and locate resets."""
     function_starts: set[int] = set()
     import_lines: set[int] = set()
     string_continuations: set[int] = set()
+    signature_continuations: set[int] = set()
     literal_spans = []
 
     # Collect source exclusions separately from token-level counting.
     for node in ast.walk(source.tree):
         if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
             function_starts.add(node.lineno)
+
+            # Decorators on the first body statement still execute inside the body.
+            first = node.body[0]
+            body_start = min([first.lineno, *(decorator.lineno for decorator in getattr(first, "decorator_list", []))])
+            signature_continuations.update(range(node.lineno + 1, body_start))
 
         # Imports do not contribute to the complexity budget.
         elif isinstance(node, (ast.Import, ast.ImportFrom)):
@@ -66,6 +72,7 @@ def counted_lines(source: Source) -> tuple[set[int], set[int]]:
         for token in source.tokens
         if token.type not in NON_CODE_TOKENS
         and token.start[0] not in import_lines
+        and token.start[0] not in signature_continuations
         and not (token.type == tokenize.STRING and token.start[0] in string_continuations)
         and not inside_literal(token)
     }

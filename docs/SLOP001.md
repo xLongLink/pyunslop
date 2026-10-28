@@ -3,6 +3,8 @@
 Warn when an uncommented run exceeds a fixed budget of 10 points:
 
 - Ordinary non-import code lines cost 1 point.
+- Function signatures count once, regardless of how many lines their parameters
+  and annotations occupy. Their bodies still count normally.
 - Literal-only lists, tuples, sets, and dictionaries count once, including nested
   containers and signed numbers. Item lines and closing delimiters do not add
   points; executable code following a closing delimiter still counts.

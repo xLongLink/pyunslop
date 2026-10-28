@@ -141,6 +141,29 @@ def test_function_definitions_reset_frequency(check_source: Callable[[str], list
     assert check_source(source) == []
 
 
+@pytest.mark.parametrize("prefix", ["def", "async def"])
+def test_multiline_signatures_count_once(check_source: Callable[[str], list[CheckWarning]], prefix: str) -> None:
+    """Do not require comments merely because parameters span many lines."""
+    signature = f"{prefix} run(\n" + "".join(f"    arg{index}: int = {index},\n" for index in range(15)) + ") -> None:\n"
+    assert check_source(signature + "    work()\n" * 9) == []
+    warnings = check_source(signature + "    work()\n" * 10)
+    assert [(warning.code, warning.line) for warning in warnings] == [("SLOP001", 27)]
+
+
+def test_signature_closing_line_keeps_inline_body(check_source: Callable[[str], list[CheckWarning]]) -> None:
+    """Retain executable code sharing the signature's closing line."""
+    signature = "def run(\n    value: int,\n): "
+    assert check_source(signature + "; ".join("work()" for _ in range(10)) + "\n") == []
+    warnings = check_source(signature + "work()\n" + "work()\n" * 9)
+    assert [(warning.code, warning.line) for warning in warnings] == [("SLOP001", 12)]
+
+
+def test_first_body_decorators_still_count(check_source: Callable[[str], list[CheckWarning]]) -> None:
+    """Do not mistake decorators on a nested definition for signature lines."""
+    source = "def outer(\n    value: int,\n):\n" + "    @decorate\n" * 10 + "    def inner():\n        pass\n"
+    assert [(warning.code, warning.line) for warning in check_source(source)] == [("SLOP001", 13)]
+
+
 @pytest.mark.parametrize("source", MULTILINE_STRINGS)
 def test_multiline_and_adjacent_strings_count_once(check_source: Callable[[str], list[CheckWarning]], source: str) -> None:
     """Avoid counting every physical line of a string expression."""
