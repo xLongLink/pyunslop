@@ -1,4 +1,5 @@
 import ast
+import pytest
 import textwrap
 from tests.support import codes
 from pyunslop.analysis.queries import analyze_queries
@@ -30,6 +31,27 @@ def test_domains_are_independent_on_the_same_tree() -> None:
 
 
 def test_policies_are_always_enabled() -> None:
-    """Enable both repository policies without requiring configuration."""
-    source = '"""Module docs."""\nfrom src.errors import ConflictError\n'
-    assert sorted(codes(source)) == ["SLOP013", "SLOP014"]
+    """Enable the module-docstring policy without requiring configuration."""
+    assert codes('"""Module docs."""\n') == ["SLOP014"]
+
+
+@pytest.mark.parametrize(
+    "source",
+    [
+        "import unittest",
+        "import unittest as ut",
+        "import unittest.mock as mock",
+        "from unittest import TestCase as Case",
+        "from unittest.mock import patch, Mock",
+        "from unittest import *",
+        "def test_example():\n    import unittest",
+        "from src.errors import ConflictError",
+        "import src.errors as errors",
+        "from src import errors",
+        "import src.errors.http",
+        "from src.errors.http import ConflictError",
+    ],
+)
+def test_imports_do_not_enforce_project_design_choices(source: str) -> None:
+    """Allow imports previously rejected by project-specific policies."""
+    assert codes(source) == []

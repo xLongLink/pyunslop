@@ -44,10 +44,8 @@ DO run `uvx pyunslop` and fix any warnings
 | [SLOP010](docs/SLOP010.md) | Name allowlisted domain-class instances before calling their methods. |
 | [SLOP011](docs/SLOP011.md) | Declare FastAPI JSON endpoint response schemas explicitly. |
 | [SLOP012](docs/SLOP012.md) | Return API payloads directly instead of generic success envelopes. |
-| [SLOP013](docs/SLOP013.md) | Do not import retired `src.errors` wrappers. |
 | [SLOP014](docs/SLOP014.md) | Reject leading module docstrings (CLI help exempt). |
 | [SLOP015](docs/SLOP015.md) | Replace single literal-case pytest parametrization when it adds no fixture/collection behavior. |
-| [SLOP016](docs/SLOP016.md) | Use pytest instead of unittest. |
 | [SLOP017](docs/SLOP017.md) | Order Pydantic model fields from shortest name to longest within each section. |
 | [SLOP018](docs/SLOP018.md) | Review response-model reconstruction when the route already declares that model. |
 | [SLOP019](docs/SLOP019.md) | Use an explicit loop for dependent walrus bindings in comprehension constructor arguments. |

@@ -11,8 +11,8 @@ from collections.abc import Callable
 
 def test_noqa_cannot_hide_native_findings(check_source: Callable[[str], list[CheckWarning]]) -> None:
     """A suppression must not hide itself or another native policy warning."""
-    warnings = check_source("from src.errors import ConflictError  # noqa: SLOP013, SLOP004\n")
-    assert {warning.code for warning in warnings} == {"SLOP013", "SLOP004"}
+    warnings = check_source('"""Module docs."""  # noqa: SLOP014, SLOP004\n')
+    assert {warning.code for warning in warnings} == {"SLOP014", "SLOP004"}
 
 
 def test_invalid_source_is_skipped(check_source: Callable[[str], list[CheckWarning]]) -> None:
@@ -46,7 +46,7 @@ def test_repository_policies_cannot_be_disabled(tmp_path: Path) -> None:
 
 def test_one_source_parse_feeds_all_native_rules(source_file: Path, mocker: MockerFixture) -> None:
     """Share parsing and tokenization across independent analyzers."""
-    source_file.write_text("from src.errors import ConflictError\n#bad\n")
+    source_file.write_text('"""Module docs."""\n#bad\n')
     parse = mocker.patch("pyunslop.source.ast.parse", wraps=ast.parse)
     tokens = mocker.patch("pyunslop.source.tokenize.generate_tokens", wraps=tokenize.generate_tokens)
     warnings = check_file(source_file)
@@ -54,15 +54,15 @@ def test_one_source_parse_feeds_all_native_rules(source_file: Path, mocker: Mock
     # Multiple AST traversals must not repeat parsing or tokenization.
     assert parse.call_count == 1
     assert tokens.call_count == 1
-    assert {warning.code for warning in warnings} == {"SLOP013", "SLOP002", "SLOP003"}
+    assert {warning.code for warning in warnings} == {"SLOP014", "SLOP002", "SLOP003"}
 
 
 def test_comment_and_ast_locations_use_one_based_columns(source_file: Path) -> None:
     """Both native diagnostic sources share the public location convention."""
-    source = "from src.errors import ConflictError\n#bad\n"
+    source = '"""Module docs."""\n#bad\n'
     source_file.write_text(source)
     warnings = check_file(source_file)
-    assert [(warning.line, warning.column, warning.code) for warning in warnings] == [(1, 1, "SLOP013"), (2, 1, "SLOP002"), (2, 1, "SLOP003")]
+    assert [(warning.line, warning.column, warning.code) for warning in warnings] == [(1, 1, "SLOP014"), (2, 1, "SLOP002"), (2, 1, "SLOP003")]
 
 
 def test_warning_location_and_integration(tmp_path: Path) -> None:

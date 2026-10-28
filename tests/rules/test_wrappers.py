@@ -36,7 +36,7 @@ def test_framework_subclass_and_documented_boundary_are_preserved() -> None:
         """Public compatibility boundary."""
         pass
     '''
-    assert codes(source) == ["SLOP016"]
+    assert codes(source) == []
 
 
 def test_private_framework_hook_is_preserved() -> None:

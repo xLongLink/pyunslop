@@ -26,7 +26,6 @@ pyunslop/
         http.py             # HTTP and response recognition
     rules/
         comments.py         # Comment frequency, separation, spacing
-        imports.py          # Retired wrappers and unittest policies
         module_doc.py       # Module documentation and CLI-help exemptions
         pytest.py           # Parametrization and collection safeguards
         pydantic.py         # Model field ordering
