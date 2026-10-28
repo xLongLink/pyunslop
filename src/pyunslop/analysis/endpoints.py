@@ -10,7 +10,7 @@ from pyunslop.analysis.bindings import BindingVisitor
 class Endpoint:
     """Keep route contracts and return summaries together for one function."""
 
-    routes: list[ast.Call]
+    check_returns: bool
     response_models: set[str]
     saw_return: bool = False
     all_returns_raw: bool = True
@@ -55,7 +55,10 @@ class EndpointAnalyzer(BindingVisitor):
         """Resolve decorator contracts before entering parameter-local scope."""
         routes = self.routes_for(node)
         endpoint = Endpoint(
-            routes, {self.qualified(keyword.value) for route in routes for keyword in route.keywords if keyword.arg == "response_model"}
+            check_returns=bool(routes) and not any(http.is_external(route) for route in routes),
+            response_models={
+                self.qualified(keyword.value) for route in routes for keyword in route.keywords if keyword.arg == "response_model"
+            },
         )
 
         # Return checks need this context only while its function is active.
@@ -67,7 +70,7 @@ class EndpointAnalyzer(BindingVisitor):
 
         # Decorator options are resolved after restoring the enclosing import scope.
         if self.annotation_kind(node.returns) != "@response" and not (endpoint.saw_return and endpoint.all_returns_raw):
-            for route in endpoint.routes:
+            for route in routes:
                 if http.needs_response_model(route, self.qualified):
                     self.findings.append(Finding.at(route, "SLOP010", "declare response_model explicitly for this JSON endpoint"))
 
@@ -99,7 +102,7 @@ class EndpointAnalyzer(BindingVisitor):
             endpoint.all_returns_raw = endpoint.all_returns_raw and return_kind == "@response"
 
             # Only route returns participate in response-policy checks.
-            if endpoint.routes and not any(http.is_external(route) for route in endpoint.routes):
+            if endpoint.check_returns:
                 self.findings.extend(self.reconstructed_response(node, endpoint))
 
                 # Disabling a schema alone does not opt out of envelope checks.

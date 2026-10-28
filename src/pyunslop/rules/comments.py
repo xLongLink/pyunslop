@@ -4,6 +4,7 @@ import re
 import ast
 import tokenize
 from typing import TYPE_CHECKING
+from pyunslop.ast_utils import immutable_literal
 from pyunslop.diagnostics import Finding
 
 if TYPE_CHECKING:
@@ -23,11 +24,7 @@ def is_literal_container(node: ast.AST) -> bool:
 
 def is_literal_value(node: ast.AST) -> bool:
     """Include signed numbers and nested literal containers."""
-    if isinstance(node, ast.Constant):
-        return True
-    if isinstance(node, ast.UnaryOp) and isinstance(node.op, (ast.UAdd, ast.USub)):
-        return isinstance(node.operand, ast.Constant) and type(node.operand.value) in (int, float, complex)
-    return is_literal_container(node)
+    return immutable_literal(node) or is_literal_container(node)
 
 
 def counted_lines(source: Source) -> tuple[set[int], set[int]]:

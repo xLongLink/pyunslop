@@ -4,7 +4,7 @@ import ast
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from pyunslop.analysis.queries import QueryAnalyzer
+    from pyunslop.analysis.bindings import BindingVisitor
 
 SESSION_TYPES = {
     "sqlalchemy.orm.Session",
@@ -63,7 +63,7 @@ def annotation_kind(name: str) -> str:
     return ""
 
 
-def kind(node: ast.Call, context: QueryAnalyzer) -> str:
+def kind(node: ast.Call, context: BindingVisitor) -> str:
     """Recognize constructors, factories, and expressions used by query rules."""
     name = context.qualified(node.func)
     if name in SESSION_TYPES or context.kind(node.func) == "@factory":
@@ -81,7 +81,7 @@ def kind(node: ast.Call, context: QueryAnalyzer) -> str:
     return ""
 
 
-def method_kind(method: ast.Attribute, arguments: list[ast.expr], context: QueryAnalyzer) -> str:
+def method_kind(method: ast.Attribute, arguments: list[ast.expr], context: BindingVisitor) -> str:
     """Propagate buffering through known query, result, and statement methods."""
     owner = context.kind(method.value)
     if owner == "@session" and method.attr in QUERY_METHODS:

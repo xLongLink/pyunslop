@@ -89,6 +89,41 @@ def test_none_schema_is_not_an_external_protocol_marker() -> None:
     assert codes(source) == ["SLOP011"]
 
 
+@pytest.mark.parametrize("external_route", [0, 1])
+def test_stacked_routes_share_external_return_policy(external_route: int) -> None:
+    """Any external route exempts every return without exempting later endpoints."""
+    routes = ["@app.get('/one', response_model=Output)", "@app.get('/two', response_model=Output)"]
+    routes[external_route] = routes[external_route][:-1] + ", openapi_extra={'x-external-protocol': True})"
+    source = (
+        "from fastapi import FastAPI\napp = FastAPI()\n" + "\n".join(routes) + "\ndef external(user):\n"
+        "    if condition:\n        return Output.model_validate(user)\n"
+        "    return {'success': True, 'data': user}\n"
+        "@app.get('/ordinary', response_model=Output)\n"
+        "def ordinary(user):\n"
+        "    if condition:\n        return Output.model_validate(user)\n"
+        "    return {'success': True, 'data': user}\n"
+    )
+
+    # The ordinary endpoint retains both checks and their traversal order.
+    findings = check_patterns(ast.parse(source))
+    assert [(finding.line, finding.code) for finding in findings] == [(12, "SLOP015"), (13, "SLOP011")]
+
+
+def test_external_return_policy_keeps_nested_routes_and_schema_checks() -> None:
+    """External metadata neither exempts nested routes nor supplies a schema."""
+    source = (
+        "from fastapi import FastAPI\napp = FastAPI()\n"
+        "@app.get('/outer', openapi_extra={'x-external-protocol': True})\n"
+        "def outer():\n"
+        "    @app.get('/inner', response_model=None)\n"
+        "    def inner():\n"
+        "        return {'success': True, 'data': users}\n"
+        "    return {'success': True, 'data': users}\n"
+    )
+    findings = check_patterns(ast.parse(source))
+    assert [(finding.line, finding.code) for finding in findings] == [(7, "SLOP011"), (3, "SLOP010")]
+
+
 def test_nested_non_route_return_is_not_an_api_return() -> None:
     """Avoid treating a nested helper's envelope as the endpoint return."""
     source = """

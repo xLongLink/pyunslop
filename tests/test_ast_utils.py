@@ -1,7 +1,29 @@
 import ast
 import pytest
 import textwrap
-from pyunslop.ast_utils import name_loads, scope_nodes, statement_positions
+from pyunslop.ast_utils import name_loads, scope_nodes, immutable_literal, statement_positions
+
+
+@pytest.mark.parametrize(
+    ("expression", "expected"),
+    [
+        ("None", True),
+        ("True", True),
+        ("-3", True),
+        ("+2.5", True),
+        ("-2j", True),
+        ("(1, (-2j, None))", True),
+        ("-True", False),
+        ("--1", False),
+        ("(1, [])", False),
+        ("[1]", False),
+        ("1 + 2", False),
+        ("(*values,)", False),
+    ],
+)
+def test_immutable_literal_preserves_syntax_boundaries(expression: str, expected: bool) -> None:
+    """Distinguish immutable literals from mutable members and computation."""
+    assert immutable_literal(ast.parse(expression, mode="eval").body) is expected
 
 
 @pytest.mark.parametrize(

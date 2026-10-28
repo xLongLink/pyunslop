@@ -1,4 +1,16 @@
+import ast
 from tests.support import query_codes
+from pyunslop.analysis import query_types
+from pyunslop.analysis.bindings import Binding, BindingVisitor
+
+
+def test_classifier_uses_binding_visitor_contract() -> None:
+    """Classify constructors and methods without a diagnostic analyzer."""
+    context = BindingVisitor()
+    context.bindings["Session"] = Binding(identity="sqlalchemy.ext.asyncio.AsyncSession")
+    context.bindings["session"] = Binding(value="@session")
+    assert query_types.kind(ast.parse("Session(engine)", mode="eval").body, context) == "@session"
+    assert query_types.kind(ast.parse("session.scalars(stmt)", mode="eval").body, context) == "@result"
 
 
 def test_import_aliases_and_session_constructor() -> None:
