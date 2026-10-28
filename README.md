@@ -1,6 +1,6 @@
 <div align="center">
 
-<img src="banner.png" alt="pyunslop banner" />
+<img src="https://raw.githubusercontent.com/xLongLink/pyunslop/main/banner.png" alt="pyunslop banner" />
 
 <h3>Keep Python code clear, for humans and coding agents</h3>
 
