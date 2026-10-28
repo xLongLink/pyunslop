@@ -4,7 +4,7 @@ import textwrap
 import unittest
 from pathlib import Path
 from pyunslop import check_file
-from pyunslop.analysis import check_patterns
+from test_support import check_patterns
 
 IMPORTS = """\
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -15,7 +15,7 @@ from collections.abc import Sequence
 def findings(source: str) -> list[tuple[int, str]]:
     """Resolve query warnings using shared SQLAlchemy imports for each fixture."""
     tree = ast.parse(IMPORTS + textwrap.dedent(source))
-    return [(node.lineno, code) for node, code, _ in check_patterns(tree)]
+    return [(finding.line, finding.code) for finding in check_patterns(tree)]
 
 
 class QueryRuleTests(unittest.TestCase):

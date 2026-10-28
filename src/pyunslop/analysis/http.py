@@ -4,10 +4,10 @@ import ast
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from ..analysis import AnalysisVisitor
-    from ..contracts import FunctionNode, QualifiedName
+    from ..contracts import QualifiedName
 
-CODE = "PY009"
+ROUTER_TYPES = {"fastapi.FastAPI", "fastapi.applications.FastAPI", "fastapi.APIRouter", "fastapi.routing.APIRouter"}
+HTTP_METHODS = {"get", "post", "put", "patch", "delete", "options", "head", "trace", "api_route"}
 BODYLESS_STATUS_NAMES = {"CONTINUE", "SWITCHING_PROTOCOLS", "PROCESSING", "EARLY_HINTS", "NO_CONTENT", "RESET_CONTENT", "NOT_MODIFIED"}
 RAW_RESPONSE_NAMES = {
     "Response",
@@ -27,11 +27,6 @@ def annotation_kind(name: str) -> str:
     """Recognize response types that bypass FastAPI response serialization."""
     module, _, symbol = name.rpartition(".")
     return "@response" if module in {"fastapi", "fastapi.responses", "starlette.responses"} and symbol in RAW_RESPONSE_NAMES else ""
-
-
-def kind(node: ast.AST, context: AnalysisVisitor) -> str:
-    """Recognize constructed raw responses while their aliases are in scope."""
-    return annotation_kind(context.qualified(node.func)) if isinstance(node, ast.Call) else ""
 
 
 def is_bodyless_status(node: ast.AST | None, qualified: QualifiedName) -> bool:
@@ -71,27 +66,29 @@ def needs_response_model(route: ast.Call, qualified: QualifiedName) -> bool:
     return True
 
 
-class Rule:
-    """Collect raw-return exemptions independently for each endpoint."""
+def is_external(route: ast.Call) -> bool:
+    """Recognize an explicit external-protocol contract."""
+    values = {keyword.arg: keyword.value for keyword in route.keywords}
+    extra = values.get("openapi_extra")
+    if isinstance(extra, ast.Dict):
+        return any(
+            isinstance(key, ast.Constant) and key.value == "x-external-protocol" and isinstance(value, ast.Constant) and value.value is True
+            for key, value in zip(extra.keys, extra.values)
+        )
+    return False
 
-    def __init__(self) -> None:
-        """Start without return provenance for this file."""
-        self.raw_returns: dict[int, list[bool]] = {}
 
-    def check_function(self, node: FunctionNode, _context: AnalysisVisitor) -> None:
-        """Initialize return tracking before entering a function body."""
-        self.raw_returns[id(node)] = []
+def is_success_envelope(node: ast.AST | None, qualified: QualifiedName) -> bool:
+    """Identify literal success envelopes without guessing dynamic payload shapes."""
+    if isinstance(node, ast.Dict):
+        fields: dict[str | None, ast.expr] = {
+            key.value: value for key, value in zip(node.keys, node.values) if isinstance(key, ast.Constant) and isinstance(key.value, str)
+        }
+    elif isinstance(node, ast.Call) and qualified(node.func) == "dict" and not node.args:
+        fields = {keyword.arg: keyword.value for keyword in node.keywords}
+    else:
+        return False
 
-    def check_return(self, node: ast.Return, context: AnalysisVisitor) -> None:
-        """Keep nested functions' returns separate from their enclosing endpoint."""
-        if context.functions:
-            self.raw_returns[id(context.functions[-1])].append(context.kind(node.value) == "@response")
-
-    def check(self, node: FunctionNode, context: AnalysisVisitor) -> None:
-        """Require explicit JSON response schemas after analyzing endpoint returns."""
-        returns = self.raw_returns[id(node)]
-        if context.annotation_kind(node.returns) == "@response" or (returns and all(returns)):
-            return
-        for route in context.routes[id(node)]:
-            if needs_response_model(route, context.qualified):
-                context.findings.append((route, CODE, "declare response_model explicitly for this JSON endpoint"))
+    # A success flag alone is not an envelope unless it wraps detail or data.
+    success = fields.get("success")
+    return isinstance(success, ast.Constant) and success.value is True and bool({"detail", "data"} & fields.keys())

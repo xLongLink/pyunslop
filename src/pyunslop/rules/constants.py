@@ -2,10 +2,10 @@ from __future__ import annotations
 
 import ast
 from typing import TYPE_CHECKING, cast
+from ..diagnostics import Finding
 
 if TYPE_CHECKING:
-    from ..analysis import AnalysisVisitor
-    from ..contracts import ScopeNode, ASTFinding
+    from ..contracts import ScopeNode
 
 CODE = "PY114"
 
@@ -62,7 +62,7 @@ def constant_target(statement: ast.stmt, private_only: bool) -> ast.Name | None:
     return target if not private_only or target.id.startswith("_") else None
 
 
-def single_use_constants(scope: ScopeNode) -> list[ASTFinding]:
+def single_use_constants(scope: ScopeNode) -> list[Finding]:
     """Find conservative, same-scope literal-inlining review candidates."""
     nodes = list(ast.walk(scope))
     if any(
@@ -77,7 +77,7 @@ def single_use_constants(scope: ScopeNode) -> list[ASTFinding]:
 
     # Nested scopes can capture or shadow an otherwise single use.
     nested = [child for node in nodes if node is not scope and isinstance(node, SCOPE_BOUNDARIES) for child in ast.walk(node)]
-    findings: list[ASTFinding] = []
+    findings: list[Finding] = []
     for statement in scope.body:
         target = constant_target(statement, isinstance(scope, ast.Module))
         if target is None:
@@ -89,12 +89,6 @@ def single_use_constants(scope: ScopeNode) -> list[ASTFinding]:
             continue
         uses = [node for node in references if isinstance(node, ast.Name) and isinstance(node.ctx, ast.Load)]
         if len(uses) == 1 and (uses[0].lineno, uses[0].col_offset) > (cast(int, statement.end_lineno), cast(int, statement.end_col_offset)):
-            findings.append(
-                (target, CODE, f"review inlining single-use constant {target.id}; preserve meaningful names and intentional boundaries")
-            )
+            message = f"review inlining single-use constant {target.id}; preserve meaningful names and intentional boundaries"
+            findings.append(Finding.at(target, CODE, message))
     return findings
-
-
-def check(node: ScopeNode, context: AnalysisVisitor) -> None:
-    """Review literal constants without weakening bindings or public boundaries."""
-    context.findings.extend(single_use_constants(node))

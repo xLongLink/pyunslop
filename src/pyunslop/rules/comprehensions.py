@@ -2,10 +2,11 @@ from __future__ import annotations
 
 import ast
 from typing import TYPE_CHECKING
+from ..diagnostics import Finding
 from collections.abc import Sequence
 
 if TYPE_CHECKING:
-    from ..analysis import AnalysisVisitor
+    from ..source import Source
     from ..contracts import ComprehensionNode
 
 CODE = "PY106"
@@ -43,18 +44,21 @@ def comprehension_dependencies(node: ComprehensionNode) -> list[ast.NamedExpr]:
     return findings
 
 
-class Rule:
-    """Deduplicate bindings reached through nested comprehensions."""
-
-    def __init__(self) -> None:
-        """Start with no reported bindings for this file."""
-        self.reported_bindings: set[int] = set()
-
-    def check(self, node: ComprehensionNode, context: AnalysisVisitor) -> None:
-        """Recommend explicit loops for dependent constructor walrus bindings."""
+def check_comprehensions(source: Source) -> list[Finding]:
+    """Report each dependent binding once, including nested comprehensions."""
+    reported: set[ast.NamedExpr] = set()
+    findings = []
+    for node in ast.walk(source.tree):
+        if not isinstance(node, (ast.ListComp, ast.SetComp, ast.DictComp, ast.GeneratorExp)):
+            continue
         for binding in comprehension_dependencies(node):
-            if id(binding) not in self.reported_bindings:
-                self.reported_bindings.add(id(binding))
-                context.findings.append(
-                    (binding, CODE, "use an explicit loop when a comprehension's constructor arguments depend on a walrus binding")
+            if binding not in reported:
+                reported.add(binding)
+
+                # Nested comprehensions can expose the same binding more than once.
+                findings.append(
+                    Finding.at(
+                        binding, CODE, "use an explicit loop when a comprehension's constructor arguments depend on a walrus binding"
+                    )
                 )
+    return findings

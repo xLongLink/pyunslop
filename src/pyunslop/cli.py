@@ -1,7 +1,8 @@
 import sys
 from .ruff import check_ruff
 from pathlib import Path
-from .checker import check_file, find_python_files
+from .checker import check_file
+from .discovery import find_python_files
 
 
 def main() -> int:

@@ -2,8 +2,8 @@ import json
 import subprocess  # noqa: S404
 from typing import TypedDict, cast
 from pathlib import Path
-from .checker import Warning as CheckWarning
 from dataclasses import replace
+from .diagnostics import Warning as CheckWarning
 from collections.abc import Iterable
 from importlib.metadata import PackageNotFoundError, distribution
 from importlib.resources import files, as_file

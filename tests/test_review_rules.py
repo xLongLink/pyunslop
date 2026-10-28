@@ -1,12 +1,12 @@
 import ast
 import textwrap
 import unittest
-from pyunslop.analysis import check_patterns
+from test_support import check_patterns
 
 
 def codes(source: str) -> list[str]:
     """Return native warning codes from a dedented review-rule fixture."""
-    return [code for _, code, _ in check_patterns(ast.parse(textwrap.dedent(source)))]
+    return [finding.code for finding in check_patterns(ast.parse(textwrap.dedent(source)))]
 
 
 class RepositoryPolicyTests(unittest.TestCase):
@@ -364,7 +364,7 @@ class SingleUseConstantTests(unittest.TestCase):
         """Point the warning at the redundant binding."""
         source = "_TIMEOUT = 30\nconnect(timeout=_TIMEOUT)\n"
         findings = check_patterns(ast.parse(source))
-        assert [(node.lineno, node.col_offset, code) for node, code, _ in findings] == [(1, 0, "PY114")]
+        assert [(finding.line, finding.column, finding.code) for finding in findings] == [(1, 1, "PY114")]
 
     def test_async_function(self) -> None:
         """Apply the same check to async function bodies."""

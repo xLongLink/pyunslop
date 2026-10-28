@@ -1,10 +1,7 @@
 from __future__ import annotations
 
 import ast
-from typing import TYPE_CHECKING
-
-if TYPE_CHECKING:
-    from ..analysis import AnalysisVisitor
+from ..diagnostics import Finding
 
 CODE = "PY111"
 
@@ -53,9 +50,8 @@ def borrowed_client_class(node: ast.ClassDef) -> bool:
     return True
 
 
-def check(node: ast.ClassDef, context: AnalysisVisitor) -> None:
+def check(node: ast.ClassDef) -> list[Finding]:
     """Suggest reviewing namespaced functions without removing client boundaries."""
     if borrowed_client_class(node):
-        context.findings.append(
-            (node, CODE, "review this borrowed-client-only class as namespaced functions; preserve meaningful boundaries")
-        )
+        return [Finding.at(node, CODE, "review this borrowed-client-only class as namespaced functions; preserve meaningful boundaries")]
+    return []

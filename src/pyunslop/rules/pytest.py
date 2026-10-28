@@ -2,9 +2,11 @@ from __future__ import annotations
 
 import ast
 from typing import TYPE_CHECKING
+from ..diagnostics import Finding
+from ..analysis.bindings import BindingVisitor
 
 if TYPE_CHECKING:
-    from ..analysis import AnalysisVisitor
+    from ..source import Source
     from ..contracts import FunctionNode, QualifiedName
 
 CODE = "PY015"
@@ -32,25 +34,33 @@ def single_literal_case(decorator: ast.expr, qualified: QualifiedName) -> bool:
     return True
 
 
-class Rule:
+class ParametrizationAnalyzer(BindingVisitor):
     """Keep collection-hook exemptions local to parametrization checks."""
 
-    def __init__(self) -> None:
-        """Start without module collection hooks."""
-        self.collection_hooks = False
-
-    def check_module(self, node: ast.Module, _context: AnalysisVisitor) -> None:
-        """Collect hooks before checking any test decorators."""
+    def __init__(self, source: Source) -> None:
+        """Collect module hooks before resolving test decorators."""
+        super().__init__()
+        self.findings: list[Finding] = []
         self.collection_hooks = any(
             isinstance(item, (ast.FunctionDef, ast.AsyncFunctionDef))
             and item.name in {"pytest_generate_tests", "pytest_collection_modifyitems"}
-            for item in node.body
+            for item in source.tree.body
         )
 
-    def check(self, node: FunctionNode, context: AnalysisVisitor) -> None:
+    def visit_FunctionDef(self, node: FunctionNode) -> None:  # noqa: N802
         """Review single-case parametrization without fixture or collection behavior."""
         args = [*node.args.posonlyargs, *node.args.args, *node.args.kwonlyargs]
         if not self.collection_hooks and not any(argument.arg == "request" for argument in args):
             for decorator in node.decorator_list:
-                if single_literal_case(decorator, context.qualified):
-                    context.findings.append((decorator, CODE, "replace single literal-case parametrization with a direct test"))
+                if single_literal_case(decorator, self.qualified):
+                    self.findings.append(Finding.at(decorator, CODE, "replace single literal-case parametrization with a direct test"))
+        super().visit_FunctionDef(node)
+
+    visit_AsyncFunctionDef = visit_FunctionDef  # noqa: N815
+
+
+def check_pytest(source: Source) -> list[Finding]:
+    """Review parametrization with fresh per-file collection state."""
+    analyzer = ParametrizationAnalyzer(source)
+    analyzer.visit(source.tree)
+    return analyzer.findings

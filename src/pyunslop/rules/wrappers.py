@@ -2,10 +2,11 @@ from __future__ import annotations
 
 import ast
 from typing import TYPE_CHECKING
+from ..diagnostics import Finding
 
 if TYPE_CHECKING:
-    from ..analysis import AnalysisVisitor
     from ..contracts import FunctionNode, QualifiedName
+    from ..analysis.bindings import BindingVisitor
 
 CODE = "PY110"
 
@@ -46,17 +47,17 @@ def empty_subclass(node: ast.ClassDef, qualified: QualifiedName) -> bool:
     )
 
 
-def check_function(node: FunctionNode, context: AnalysisVisitor) -> None:
+def check_function(node: FunctionNode, context: BindingVisitor) -> list[Finding]:
     """Review exact private wrappers while preserving inherited framework hooks."""
     parent = context.parents[-2] if len(context.parents) > 1 else None
     framework_method = isinstance(parent, ast.ClassDef) and (parent.bases or parent.decorator_list)
     if not framework_method and forwarded_function(node):
-        context.findings.append(
-            (node, CODE, "review this transparent forwarding wrapper; preserve public contracts and meaningful boundaries")
-        )
+        return [Finding.at(node, CODE, "review this transparent forwarding wrapper; preserve public contracts and meaningful boundaries")]
+    return []
 
 
-def check_class(node: ast.ClassDef, context: AnalysisVisitor) -> None:
+def check_class(node: ast.ClassDef, context: BindingVisitor) -> list[Finding]:
     """Review subclasses with no added behavior rather than removing them."""
     if empty_subclass(node, context.qualified):
-        context.findings.append((node, CODE, "review this subclass with no added behavior; preserve framework hooks and public contracts"))
+        return [Finding.at(node, CODE, "review this subclass with no added behavior; preserve framework hooks and public contracts")]
+    return []

@@ -420,15 +420,50 @@ python -m pip install -e .
 python -m unittest discover -s tests -v
 ```
 
-## Rule organization
+## Architecture
 
-Each native rule is implemented in its own module under `src/pyunslop/rules/`,
-such as `cm001.py`, `py009.py`, and `py114.py`. The fixed registry in
-`rules/__init__.py` connects rules to shared AST traversal in `analysis.py` and
-lexical facts in `source.py`. Stateful rules get a fresh instance for each file;
-their exemptions, deduplication, and collection hooks stay in the rule module.
-`queries.py` holds query provenance shared by several rules, while `api.py`
-holds shared route recognition. Comment counting and continuation exemptions
-belong to their respective comment rules, not the source tokenizer.
-`ruff.py` owns Ruff execution and formatter warning handling;
-Ruff's lint rules remain delegated to the pinned Ruff engine.
+Native checks use Python's standard-library `ast` and `tokenize`; there is no
+parser dependency or plugin registry. Each file is read, parsed, and tokenized
+once, then analyzed by an explicit sequence of independent checks.
+
+```text
+src/pyunslop/
+    cli.py                  # CLI output and warning-only exit policy
+    checker.py              # Public check_file orchestration
+    discovery.py            # File discovery, exclusions, deduplication
+    diagnostics.py          # Native Finding and public Warning records
+    source.py               # Encoding-aware input, AST, shared tokens
+    analysis/
+        __init__.py         # Explicit AST-check pipeline
+        bindings.py         # Position-sensitive Python name/scope handling
+        queries.py          # SQLAlchemy/SQLModel checks and per-file state
+        query_types.py      # Known database APIs and value classification
+        endpoints.py        # FastAPI contracts and return summaries
+        http.py             # HTTP and response recognition
+    rules/
+        comments.py         # Comment frequency, separation, spacing
+        imports.py          # Retired wrappers and unittest policies
+        module_doc.py       # Module documentation and CLI-help exemptions
+        pytest.py           # Parametrization and collection safeguards
+        pydantic.py         # Model field ordering
+        simplifications.py  # Syntax-only review checks
+        ...                 # Focused structural/comprehension helpers
+    ruff.py                 # External Ruff lint/format integration
+```
+
+The binding visitor owns Python traversal mechanics, not framework knowledge
+or findings. Import identities and inferred value categories are distinct
+fields. Rebinding, parameter shadowing, branch merges, and nested scopes are
+handled at their use sites rather than through a final module-wide alias map.
+
+Query and endpoint analyzers own separate state and return findings; neither
+receives the other's context. Simple rule helpers return findings instead of
+mutating a shared engine. Several focused traversals are intentional: they
+avoid callback-order dependencies without repeating source parsing. Tests for
+internal analyzers use fixture helpers under `tests/`; the public API remains
+`check_file`, `find_python_files`, and `Warning`.
+
+All native findings use the same one-based location record before conversion
+to public warnings. `checker.py` sorts native warnings by location and code;
+`ruff.py` delegates Ruff rules to the pinned executable. The CLI remains
+read-only, and findings never cause a nonzero exit status.

@@ -2,9 +2,11 @@ from __future__ import annotations
 
 import ast
 from typing import TYPE_CHECKING
+from ..diagnostics import Finding
+from ..analysis.bindings import BindingVisitor
 
 if TYPE_CHECKING:
-    from ..analysis import AnalysisVisitor
+    from ..source import Source
     from ..contracts import QualifiedName
 
 CODE = "PY014"
@@ -20,18 +22,26 @@ def uses_cli_doc(call: ast.Call, qualified: QualifiedName) -> bool:
     )
 
 
-class Rule:
+class ModuleDocAnalyzer(BindingVisitor):
     """Track CLI-help uses for one module."""
 
     def __init__(self) -> None:
         """Start without a recognized CLI-help use."""
+        super().__init__()
         self.cli_doc_used = False
 
-    def check_call(self, node: ast.Call, context: AnalysisVisitor) -> None:
+    def visit_Call(self, node: ast.Call) -> None:  # noqa: N802
         """Record help uses while import aliases are in scope."""
-        self.cli_doc_used |= uses_cli_doc(node, context.qualified)
+        self.cli_doc_used |= uses_cli_doc(node, self.qualified)
+        self.generic_visit(node)
 
-    def check(self, node: ast.Module, context: AnalysisVisitor) -> None:
-        """Reject module documentation unless it supplies recognized CLI help."""
-        if ast.get_docstring(node) is not None and not self.cli_doc_used:
-            context.findings.append((node.body[0], CODE, "repository policy forbids leading module docstrings"))
+
+def check_module_doc(source: Source) -> list[Finding]:
+    """Reject module documentation unless it supplies recognized CLI help."""
+    if ast.get_docstring(source.tree) is None:
+        return []
+    analyzer = ModuleDocAnalyzer()
+    analyzer.visit(source.tree)
+    if analyzer.cli_doc_used:
+        return []
+    return [Finding.at(source.tree.body[0], CODE, "repository policy forbids leading module docstrings")]

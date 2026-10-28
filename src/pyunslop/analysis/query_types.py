@@ -4,7 +4,7 @@ import ast
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from .analysis import AnalysisVisitor
+    from .queries import QueryAnalyzer
 
 SESSION_TYPES = {
     "sqlalchemy.orm.Session",
@@ -64,7 +64,7 @@ def annotation_kind(name: str) -> str:
     return ""
 
 
-def kind(node: ast.Call, context: AnalysisVisitor) -> str:
+def kind(node: ast.Call, context: QueryAnalyzer) -> str:
     """Recognize constructors, factories, and expressions used by query rules."""
     name = context.qualified(node.func)
     if name in SESSION_TYPES or context.kind(node.func) == "@factory":
@@ -82,7 +82,7 @@ def kind(node: ast.Call, context: AnalysisVisitor) -> str:
     return ""
 
 
-def method_kind(method: ast.Attribute, arguments: list[ast.expr], context: AnalysisVisitor) -> str:
+def method_kind(method: ast.Attribute, arguments: list[ast.expr], context: QueryAnalyzer) -> str:
     """Propagate buffering through known query, result, and statement methods."""
     owner = context.kind(method.value)
     if owner == "@session" and method.attr in QUERY_METHODS:

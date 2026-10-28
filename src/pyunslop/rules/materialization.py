@@ -3,10 +3,11 @@ from __future__ import annotations
 import ast
 from typing import TYPE_CHECKING
 from ..ast_utils import name_loads
+from ..diagnostics import Finding
 
 if TYPE_CHECKING:
-    from ..analysis import AnalysisVisitor
-    from ..contracts import ASTFinding, FunctionNode, QualifiedName
+    from ..contracts import FunctionNode, QualifiedName
+    from ..analysis.bindings import BindingVisitor
 
 CODE = "PY107"
 ITERABLE_CONSUMERS = {"sum", "min", "max", "tuple", "set", "frozenset"}
@@ -21,9 +22,7 @@ def simple_comprehension(node: ast.AST) -> bool:
     return all(not generator.is_async and not generator.ifs for generator in node.generators)
 
 
-def temporary_iterable_pair(
-    function: FunctionNode, assignment: ast.stmt, following: ast.stmt, qualified: QualifiedName
-) -> list[ASTFinding]:
+def temporary_iterable_pair(function: FunctionNode, assignment: ast.stmt, following: ast.stmt, qualified: QualifiedName) -> list[Finding]:
     """Require a single adjacent consumer so intervening code keeps snapshots."""
     if not isinstance(assignment, ast.Assign) or len(assignment.targets) != 1:
         return []
@@ -41,14 +40,14 @@ def temporary_iterable_pair(
     if not isinstance(consumer, ast.Call) or getattr(following, "value", None) is not consumer:
         return []
     if qualified(consumer.func) in ITERABLE_CONSUMERS and consumer.args == [node] and not consumer.keywords:
-        return [(assignment.value, CODE, "review a generator for this single-use list; preserve snapshot and exception timing")]
+        return [Finding.at(assignment.value, CODE, "review a generator for this single-use list; preserve snapshot and exception timing")]
     return []
 
 
-def check_assign(node: ast.Assign, context: AnalysisVisitor) -> None:
+def check_assign(node: ast.Assign, context: BindingVisitor) -> list[Finding]:
     """Review local temporary lists at the point their consumer is resolved."""
     if not context.functions:
-        return
+        return []
     parent = context.parents[-2]
     for _, statements in ast.iter_fields(parent):
         if not isinstance(statements, list) or node not in statements:
@@ -57,10 +56,11 @@ def check_assign(node: ast.Assign, context: AnalysisVisitor) -> None:
         # Require an immediately adjacent consumer in the same statement list.
         index = statements.index(node)
         if index + 1 < len(statements):
-            context.findings.extend(temporary_iterable_pair(context.functions[-1], node, statements[index + 1], context.qualified))
+            return temporary_iterable_pair(context.functions[-1], node, statements[index + 1], context.qualified)
+    return []
 
 
-def check_call(node: ast.Call, context: AnalysisVisitor) -> None:
+def check_call(node: ast.Call, context: BindingVisitor) -> list[Finding]:
     """Review direct comprehensions passed to known iterable-only consumers."""
     if (
         context.qualified(node.func) in ITERABLE_CONSUMERS
@@ -69,6 +69,7 @@ def check_call(node: ast.Call, context: AnalysisVisitor) -> None:
         and simple_comprehension(node.args[0])
     ):
         # Generator conversion still requires checking snapshot and exception timing.
-        context.findings.append(
-            (node.args[0], CODE, "review a generator for this iterable-only consumer; preserve snapshot and exception timing")
-        )
+        return [
+            Finding.at(node.args[0], CODE, "review a generator for this iterable-only consumer; preserve snapshot and exception timing")
+        ]
+    return []

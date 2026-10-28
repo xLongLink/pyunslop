@@ -1,12 +1,12 @@
 import ast
 import textwrap
 import unittest
-from pyunslop.analysis import check_patterns
+from test_support import check_patterns
 
 
 def codes(source: str) -> list[str]:
     """Return native warning codes for a dedented source fixture."""
-    return [code for _, code, _ in check_patterns(ast.parse(textwrap.dedent(source)))]
+    return [finding.code for finding in check_patterns(ast.parse(textwrap.dedent(source)))]
 
 
 class ModelFieldOrderTests(unittest.TestCase):
@@ -45,9 +45,9 @@ class ModelFieldOrderTests(unittest.TestCase):
             # Resolve import provenance without requiring Pydantic at runtime.
             with self.subTest(imported=imported):
                 source = f"{imported}\nclass Read({base}):\n    description: str\n    id: int\n"
-                ((node, code, message),) = check_patterns(ast.parse(source), source)
-                assert (node.lineno, node.col_offset, code) == (4, 4, "PY017")
-                assert "validation dependencies" in message
+                (finding,) = check_patterns(ast.parse(source), source)
+                assert (finding.line, finding.column, finding.code) == (4, 5, "PY017")
+                assert "validation dependencies" in finding.message
 
     def test_blank_lines_divide_sections_but_comments_do_not(self) -> None:
         """Reset at blank lines, not ordinary comments or multiline defaults."""
@@ -65,9 +65,9 @@ class ModelFieldOrderTests(unittest.TestCase):
             date: str
         """)
         findings = check_patterns(ast.parse(source), source)
-        assert [code for _, code, _ in findings] == ["PY017"]
-        assert isinstance(findings[0][0], ast.Name)
-        assert findings[0][0].id == "date"
+        assert [finding.code for finding in findings] == ["PY017"]
+        assert (findings[0].line, findings[0].column) == (12, 5)
+        assert source.splitlines()[findings[0].line - 1].strip() == "date: str"
 
     def test_non_fields_divide_runs(self) -> None:
         """Ignore private attributes, ClassVars, configuration, and methods."""

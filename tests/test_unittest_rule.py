@@ -2,7 +2,7 @@ import ast
 import pytest
 from pathlib import Path
 from pyunslop import check_file
-from pyunslop.analysis import check_patterns
+from test_support import check_patterns
 
 
 @pytest.mark.parametrize(
@@ -21,7 +21,7 @@ from pyunslop.analysis import check_patterns
 def test_unittest_imports(source: str) -> None:
     """Recommend pytest once per unittest import, regardless of alias or scope."""
     findings = check_patterns(ast.parse(source))
-    assert [(code, message) for _, code, message in findings] == [("PY016", "use pytest instead of unittest")]
+    assert [(finding.code, finding.message) for finding in findings] == [("PY016", "use pytest instead of unittest")]
 
 
 @pytest.mark.parametrize(
