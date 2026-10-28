@@ -18,6 +18,8 @@ def forwarded_function(node: FunctionNode) -> bool:
     args = [*node.args.posonlyargs, *node.args.args, *node.args.kwonlyargs]
     if node.args.defaults or node.args.kw_defaults or any(arg.annotation for arg in args):
         return False
+
+    # Extra statements or documentation can establish an intentional boundary.
     if len(node.body) != 1 or not isinstance(node.body[0], ast.Return):
         return False
 
@@ -29,6 +31,8 @@ def forwarded_function(node: FunctionNode) -> bool:
         return False
     if isinstance(call.func, ast.Name) and call.func.id == node.name:
         return False
+
+    # Reordering or transforming arguments adds behavior beyond forwarding.
     return len(call.args) == len(args) and all(isinstance(value, ast.Name) and value.id == arg.arg for value, arg in zip(call.args, args))
 
 

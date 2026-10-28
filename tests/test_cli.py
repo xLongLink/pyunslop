@@ -115,6 +115,7 @@ def test_query_findings_are_warnings(source_file: Path, run_cli: Callable[..., t
         assert f"warning: {code}" in stdout
 
 
+# Configuration flags and explicit paths are all rejected by the fixed-preset CLI.
 @pytest.mark.parametrize("arguments", [("--max-lines", "1"), ("--repo-policy",), ("example.py",)])
 def test_arguments_and_configuration_flags_are_not_supported(
     run_cli: Callable[..., tuple[int, str, str]], arguments: tuple[str, ...]

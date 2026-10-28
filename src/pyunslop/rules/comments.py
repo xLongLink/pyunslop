@@ -124,10 +124,7 @@ def continued_comments(source: Source) -> set[int]:
 
         # Brackets embedded in strings or comments never change expression depth.
         elif token.type == tokenize.OP:
-            if token.string in ("(", "[", "{"):
-                depth += 1
-            elif token.string in (")", "]", "}"):
-                depth -= 1
+            depth += {"(": 1, "[": 1, "{": 1, ")": -1, "]": -1, "}": -1}.get(token.string, 0)
     return comments
 
 
@@ -138,6 +135,8 @@ def check_separation(source: Source) -> list[Finding]:
     for line_number in sorted(source.standalone_comments):
         line = source.lines[line_number - 1]
         previous = source.lines[line_number - 2] if line_number > 1 else ""
+
+        # Comments introducing a suite need indentation, not a separating blank line.
         starts_suite = previous.rstrip().endswith(":") and (
             len(line.expandtabs()) - len(line.expandtabs().lstrip()) > len(previous.expandtabs()) - len(previous.expandtabs().lstrip())
         )
@@ -150,6 +149,7 @@ def check_separation(source: Source) -> list[Finding]:
             and line_number not in continued
             and not starts_suite
         ):
+            # Report only the block's opening comment.
             findings.append(Finding(line_number, 1, "CM002", "expected a blank line before the comment block"))
     return findings
 
@@ -160,6 +160,8 @@ def check_spacing(source: Source) -> list[Finding]:
     for token in source.comments:
         line, column = token.start
         is_shebang = line == 1 and token.string.startswith("#!")
+
+        # A bare marker is valid; other comments require one leading space.
         if not is_shebang and token.string != "#" and not token.string.startswith("# "):
             findings.append(Finding(line, column + 1, "CM003", "expected a space after '#'"))
     return findings
@@ -171,6 +173,7 @@ def check_suppressions(source: Source) -> list[Finding]:
     for token in source.comments:
         match = NOQA_DIRECTIVE.search(token.string)
         if match:
+            # Match offsets are relative to the token, not the physical source line.
             line, column = token.start
             findings.append(Finding(line, column + match.start() + 1, "CM004", "noqa suppression directives are forbidden"))
     return findings

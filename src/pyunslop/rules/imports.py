@@ -8,8 +8,10 @@ def check_imports(source: Source) -> list[Finding]:
     findings = []
     for node in ast.walk(source.tree):
         if isinstance(node, ast.Import):
+            # One import statement can bind several unrelated dependencies.
             for alias in node.names:
                 if alias.name == "src.errors" or alias.name.startswith("src.errors."):
+                    # Point at the offending alias rather than the whole multi-import.
                     findings.append(
                         Finding.at(alias, "PY013", "do not import retired src.errors wrappers; use FastAPI HTTPException directly")
                     )
@@ -20,11 +22,13 @@ def check_imports(source: Source) -> list[Finding]:
 
         # Relative imports are deliberately unresolved rather than guessed.
         elif isinstance(node, ast.ImportFrom) and not node.level:
+            # Include both submodule imports and `from src import errors`.
             if (
                 node.module == "src.errors"
                 or (node.module or "").startswith("src.errors.")
                 or (node.module == "src" and any(alias.name == "errors" for alias in node.names))
             ):
+                # From-imports share one module identity, so report the statement once.
                 findings.append(Finding.at(node, "PY013", "do not import retired src.errors wrappers; use FastAPI HTTPException directly"))
             if node.module == "unittest" or (node.module or "").startswith("unittest."):
                 findings.append(Finding.at(node, "PY016", "use pytest instead of unittest"))

@@ -31,6 +31,7 @@ def check_fields(node: ast.ClassDef, context: BindingVisitor) -> list[Finding]:
     findings = []
     previous: ast.AnnAssign | None = None
     for statement in node.body:
+        # Methods, private state, and configuration terminate a field run.
         if not isinstance(statement, ast.AnnAssign) or not isinstance(statement.target, ast.Name) or not is_field(statement, context):
             previous = None
             continue
@@ -40,6 +41,8 @@ def check_fields(node: ast.ClassDef, context: BindingVisitor) -> list[Finding]:
             gap = context.source_lines[previous.end_lineno : statement.lineno - 1]
             if not any(not line.strip() for line in gap) and len(statement.target.id) < len(previous.target.id):
                 findings.append(Finding.at(statement.target, CODE, MESSAGE))
+
+        # Compare adjacent fields, including after a section boundary.
         previous = statement
     return findings
 

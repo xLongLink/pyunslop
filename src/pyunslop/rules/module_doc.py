@@ -42,6 +42,8 @@ def check_module_doc(source: Source) -> list[Finding]:
         return []
     analyzer = ModuleDocAnalyzer()
     analyzer.visit(source.tree)
+
+    # Merely referencing __doc__ does not establish a CLI-help exemption.
     if analyzer.cli_doc_used:
         return []
     return [Finding.at(source.tree.body[0], CODE, "repository policy forbids leading module docstrings")]

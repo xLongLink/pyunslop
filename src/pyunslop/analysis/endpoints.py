@@ -62,6 +62,7 @@ class EndpointAnalyzer(BindingVisitor):
         # Decorator options are resolved after restoring the enclosing import scope.
         if self.annotation_kind(node.returns) != "@response" and not (endpoint.raw_returns and all(endpoint.raw_returns)):
             for route in endpoint.routes:
+                # Each decorator may declare a different serialization contract.
                 if http.needs_response_model(route, self.qualified):
                     self.findings.append(Finding.at(route, "PY009", "declare response_model explicitly for this JSON endpoint"))
 
@@ -109,6 +110,7 @@ class EndpointAnalyzer(BindingVisitor):
         # Imported model transformations cannot be proven absent by this local check.
         model = self.qualified(value.func.value)
         if model and model not in self.transforming_models and endpoint.response_models == {model}:
+            # This is a review candidate, not proof that validation is redundant.
             return [
                 Finding.at(
                     value,

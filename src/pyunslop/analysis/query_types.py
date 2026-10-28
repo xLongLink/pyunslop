@@ -89,6 +89,8 @@ def method_kind(method: ast.Attribute, arguments: list[ast.expr], context: Query
         if method.attr == "execute":
             single = bool(arguments) and context.kind(arguments[0]) == "@single_statement"
             return "@single_execute_result" if single else "@execute_result"
+
+        # Streaming APIs must never become buffered-iteration candidates.
         return "@stream_result" if method.attr.startswith("stream") else "@result"
 
     # Scalar transformations consume execute provenance without losing buffering.
@@ -96,6 +98,8 @@ def method_kind(method: ast.Attribute, arguments: list[ast.expr], context: Query
         if owner in EXECUTE_RESULTS and method.attr == "scalars":
             return "@result"
         return "@stream_result" if method.attr == "yield_per" else owner
+
+    # Materialization yields rows; statement modifiers retain selection shape.
     if owner in RESULT_KINDS and method.attr in {"all", "fetchall"}:
         return "@rows"
     if owner in {"@statement", "@single_statement"} and method.attr in STATEMENT_METHODS:

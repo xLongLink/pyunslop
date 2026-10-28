@@ -16,6 +16,8 @@ def check_file(path: Path) -> list[CheckWarning]:
         facts = Source.read(path)
     except (OSError, SyntaxError, UnicodeError, tokenize.TokenError):
         return []
+
+    # Both rule families share one parse; sort their combined diagnostics by location.
     findings = [*check_comments(facts), *check_patterns(facts)]
     warnings = [CheckWarning(path, item.line, item.column, item.code, item.message) for item in findings]
     return sorted(warnings, key=lambda warning: (warning.line, warning.column, warning.code))

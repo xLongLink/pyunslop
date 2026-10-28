@@ -28,6 +28,8 @@ def immutable_literal(node: ast.AST) -> bool:
         return True
     if isinstance(node, ast.Tuple):
         return all(immutable_literal(element) for element in node.elts)
+
+    # Signed numeric literals are unary expressions, not Constant nodes.
     if not isinstance(node, ast.UnaryOp) or not isinstance(node.op, (ast.UAdd, ast.USub)):
         return False
     return isinstance(node.operand, ast.Constant) and type(node.operand.value) in (int, float, complex)
@@ -39,6 +41,8 @@ def mentions_binding(node: ast.AST, name: str) -> bool:
         return node.id == name
     if isinstance(node, ast.arg):
         return node.arg == name
+
+    # Definitions bind their names without an ast.Name store.
     if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)):
         return node.name == name
 
@@ -88,6 +92,8 @@ def single_use_constants(scope: ScopeNode) -> list[Finding]:
         if len(references) != 2 or any(mentions_binding(node, target.id) for node in nested):
             continue
         uses = [node for node in references if isinstance(node, ast.Name) and isinstance(node.ctx, ast.Load)]
+
+        # Moving a literal before its assignment would change execution behavior.
         if len(uses) == 1 and (uses[0].lineno, uses[0].col_offset) > (cast(int, statement.end_lineno), cast(int, statement.end_col_offset)):
             message = f"review inlining single-use constant {target.id}; preserve meaningful names and intentional boundaries"
             findings.append(Finding.at(target, CODE, message))

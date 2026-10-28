@@ -7,7 +7,6 @@
 
 [![Tests](https://github.com/xLongLink/pyunslop/actions/workflows/tests.yml/badge.svg)](https://github.com/xLongLink/pyunslop/actions/workflows/tests.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
-[![Python versions](https://img.shields.io/pypi/pyversions/pyunslop)](https://pypi.org/project/pyunslop/)
 [![PyPI version](https://img.shields.io/pypi/v/pyunslop)](https://pypi.org/project/pyunslop/)
 
 </div>
@@ -19,6 +18,13 @@ Run to flag the issues, ask you agent to fix them:
 ```
 uvx pyunslop
 ```
+
+Add to you `AGENTS.md` file:
+
+```
+DO run `uvx pyunslop` and fix any warnings
+```
+
 
 <br />
 

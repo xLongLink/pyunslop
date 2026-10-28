@@ -50,10 +50,13 @@ class BindingVisitor(ast.NodeVisitor):
     def annotation(self, node: ast.expr | None) -> str:
         """Resolve ordinary, generic, and quoted outer annotation names."""
         if isinstance(node, ast.Constant) and isinstance(node.value, str):
+            # Invalid forward references have no reliable identity.
             try:
                 node = ast.parse(node.value, mode="eval").body
             except SyntaxError:
                 return ""
+
+        # Generic arguments do not change the outer annotation's identity.
         if isinstance(node, ast.Subscript):
             node = node.value
         return self.qualified(node)
@@ -99,6 +102,8 @@ class BindingVisitor(ast.NodeVisitor):
             # Explicit mutable contracts must survive domain value classification.
             for argument in arguments:
                 self.contracts[argument.arg] = self.annotation(argument.annotation)
+
+            # Traverse the body only after all parameter contracts are established.
             for statement in node.body:
                 self.visit(statement)
         finally:
@@ -113,6 +118,7 @@ class BindingVisitor(ast.NodeVisitor):
         if isinstance(target, ast.Name):
             self.bindings[target.id] = Binding(value=value)
         elif isinstance(target, (ast.Tuple, ast.List)):
+            # Unpacking does not preserve the source value's database provenance.
             for element in target.elts:
                 self.bind(element, "")
 

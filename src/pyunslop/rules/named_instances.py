@@ -20,6 +20,8 @@ def check(node: ast.Call, context: BindingVisitor) -> list[Finding]:
     # Follow property access such as applications.logs back to the constructor.
     while isinstance(owner, ast.Attribute):
         owner = owner.value
+
+    # Only allowlisted constructor identities require a named instance.
     if isinstance(owner, ast.Call):
         name = context.qualified(owner.func).rsplit(".", 1)[-1]
         if name in DOMAIN_CLASSES:

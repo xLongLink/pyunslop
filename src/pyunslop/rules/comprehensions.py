@@ -33,6 +33,7 @@ def comprehension_dependencies(node: ComprehensionNode) -> list[ast.NamedExpr]:
     roots = [node.key, node.value] if isinstance(node, ast.DictComp) else [node.elt]
     findings = []
     for root in roots:
+        # Constructor naming is deliberately conservative; ordinary calls are ignored.
         for call in (item for item in ast.walk(root) if isinstance(item, ast.Call)):
             name = call.func.id if isinstance(call.func, ast.Name) else getattr(call.func, "attr", "")
             if not name.lstrip("_")[:1].isupper():
@@ -51,6 +52,8 @@ def check_comprehensions(source: Source) -> list[Finding]:
     for node in ast.walk(source.tree):
         if not isinstance(node, (ast.ListComp, ast.SetComp, ast.DictComp, ast.GeneratorExp)):
             continue
+
+        # The same nested binding can be reached from multiple comprehension roots.
         for binding in comprehension_dependencies(node):
             if binding not in reported:
                 reported.add(binding)

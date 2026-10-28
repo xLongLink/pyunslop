@@ -49,6 +49,8 @@ def check_assign(node: ast.Assign, context: BindingVisitor) -> list[Finding]:
     if not context.functions:
         return []
     parent = context.parents[-2]
+
+    # Only statement-list siblings can establish an adjacent consumer.
     for _, statements in ast.iter_fields(parent):
         if not isinstance(statements, list) or node not in statements:
             continue

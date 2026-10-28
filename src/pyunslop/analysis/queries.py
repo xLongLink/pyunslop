@@ -44,6 +44,8 @@ class QueryAnalyzer(BindingVisitor):
                 isinstance(target, ast.Name) and self.contracts.get(target.id, "") in {"", "typing.Sequence", "collections.abc.Sequence"}
                 for target in parent.targets
             )
+
+        # An explicit annotation takes precedence over inferred assignment usage.
         if isinstance(parent, ast.AnnAssign):
             return self.annotation(parent.annotation) in {"typing.Sequence", "collections.abc.Sequence"}
 
@@ -72,11 +74,15 @@ class QueryAnalyzer(BindingVisitor):
             ):
                 self.reported_returns.add(function)
                 self.findings.append(Finding.at(function.returns, "PY002", "use Sequence[T] for a read-only query-result return type"))
+
+        # Return expressions may contain additional query operations.
         self.generic_visit(node)
 
     def visit_For(self, node: LoopNode) -> None:
         """Review buffered iteration and single-column row unpacking."""
         iterable = node.iter
+
+        # Async iteration and argument-bearing calls retain their existing semantics.
         if (
             type(node) is ast.For
             and isinstance(iterable, ast.Call)
@@ -98,6 +104,8 @@ class QueryAnalyzer(BindingVisitor):
             self.findings.append(
                 Finding.at(node.target, "PY108", "use session.scalars() for this single-column query; preserve cardinality checks")
             )
+
+        # Bind loop targets only after checking the incoming query provenance.
         super().visit_For(node)
 
     visit_AsyncFor = visit_For
@@ -115,17 +123,21 @@ class QueryAnalyzer(BindingVisitor):
         # One-element unpacking is eligible; multi-column row contracts stay intact.
         for target in node.targets:
             if isinstance(target, (ast.Tuple, ast.List)) and len(target.elts) == 1 and single_row:
+                # Keep the one/first consumer's cardinality requirement in the warning.
                 self.findings.append(
                     Finding.at(
                         target, "PY108", "use session.scalars() for single-column row unpacking; preserve the existing cardinality check"
                     )
                 )
+
+        # Assignment may overwrite the result name used by the checks above.
         super().visit_Assign(node)
 
     def in_expression_context(self) -> bool:
         """Require SQL ownership without crossing an unrelated enclosing call."""
         for parent in reversed(self.parents[:-1]):
             if isinstance(parent, ast.Call):
+                # Known expression constructors establish SQL ownership directly.
                 if self.qualified(parent.func) in query_types.EXPRESSION_FUNCTIONS:
                     return True
 
@@ -203,6 +215,7 @@ class QueryAnalyzer(BindingVisitor):
         """Review adjacent same-session commit/refresh calls without rewriting."""
         refresh = called_method(node)
         if refresh and refresh.attr == "refresh" and self.kind(refresh.value) == "@session":
+            # Search statement lists, not arbitrary sibling AST fields.
             for _, statements in ast.iter_fields(self.parents[-2]):
                 if not isinstance(statements, list) or node not in statements:
                     continue

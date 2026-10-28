@@ -19,6 +19,8 @@ def single_literal_case(decorator: ast.expr, qualified: QualifiedName) -> bool:
     options = {keyword.arg: keyword.value for keyword in decorator.keywords}
     if any(key in options for key in (None, "ids", "scope")):
         return False
+
+    # Even a single indirect case may control fixture setup and collection.
     indirect = options.get("indirect")
     if indirect is not None and not (isinstance(indirect, ast.Constant) and indirect.value is False):
         return False
@@ -27,6 +29,8 @@ def single_literal_case(decorator: ast.expr, qualified: QualifiedName) -> bool:
     values = decorator.args[1] if len(decorator.args) > 1 else options.get("argvalues")
     if not isinstance(values, (ast.List, ast.Tuple)) or len(values.elts) != 1:
         return False
+
+    # Literal evaluation rejects computed cases without executing inspected code.
     try:
         ast.literal_eval(values.elts[0])
     except (ValueError, TypeError):
@@ -52,6 +56,7 @@ class ParametrizationAnalyzer(BindingVisitor):
         args = [*node.args.posonlyargs, *node.args.args, *node.args.kwonlyargs]
         if not self.collection_hooks and not any(argument.arg == "request" for argument in args):
             for decorator in node.decorator_list:
+                # Preserve decorators whose case carries fixture or collection semantics.
                 if single_literal_case(decorator, self.qualified):
                     self.findings.append(Finding.at(decorator, CODE, "replace single literal-case parametrization with a direct test"))
         super().visit_FunctionDef(node)
