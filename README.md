@@ -39,9 +39,7 @@ uvx --from . pyunslop
 Once published to PyPI, `uvx pyunslop` will run it without a separate install.
 `python -m pyunslop` is also supported after installation.
 
-```text
-example.py:12:1: warning: CM001 more than 10 code lines without a standalone comment
-```
+Rule definitions, examples, and safeguards are documented in the linked pages below.
 
 | Code | Warning |
 | --- | --- |
@@ -109,15 +107,6 @@ Python 3.12 target, preview lint rules, and formatting with
 `skip-magic-trailing-comma = true`. The exact configuration is in `pyproject.toml`
 and bundled in the installed package's `ruff.toml`.
 
-The enforced lint selection is:
-
-```toml
-[tool.ruff.lint]
-preview = true
-select = ["F", "UP", "D", "DTZ", "I", "ICN", "PIE", "RET", "ARG", "N", "PERF", "PTH", "A", "S", "ASYNC", "ANN", "B006", "E302", "E305", "PGH003", "PT", "RUF100", "S324", "S506"]
-ignore = ["D100", "D104", "D202"]
-```
-
 Ruff diagnostics retain their original rule codes (`F401`, `UP007`, `S506`, etc.)
 and are reported as warnings. The table above describes each selected family
 and individually selected rule.
@@ -164,212 +153,6 @@ Ruff exits with status 2. The checker never edits files
 and does not use Python's `warnings` module, so `-W error` cannot promote findings
 to exceptions.
 
-## Query-result checks
-
-These rules use imports, session/result annotations, session constructors and
-factories, and local result assignments to recognize SQLAlchemy/SQLModel APIs.
-Import aliases and quoted annotations are supported. SQLAlchemy and SQLModel
-do not need to be installed to check source files. An untyped variable merely
-named `session` or `result` is not enough to trigger a warning.
-
-**PY001:** assign the awaited result before chaining result methods:
-
-```python
-# Bad
-rows = (await session.execute(statement)).scalars().all()
-
-# Good
-result = await session.execute(statement)
-rows = result.scalars().all()
-```
-
-Recognized query methods include `execute`, `scalars`, `stream`, `stream_scalars`,
-and SQLModel's `exec`. Scalar-value queries such as `session.scalar(...)` are not
-treated as result objects.
-
-**PY002:** when a function directly returns query rows, do not declare `list[T]`
-just to wrap those rows in `list()`:
-
-```python
-from collections.abc import Sequence
-from sqlalchemy.ext.asyncio import AsyncSession
-
-async def fetch_users(session: AsyncSession) -> Sequence[User]:
-    result = await session.scalars(select(User))
-    return result.all()
-```
-
-The rule flags `list[T]` and `typing.List[T]` contracts on direct query-row
-returns, including `return list(result.all())`. It does not flag ordinary
-functions that build and return mutable lists.
-
-**PY003:** prefer `users = result.all()` to `users = list(result.all())`.
-Also applies to `fetchall()` and result transformations such as `scalars()` or
-`unique()`. The rule checks untyped local assignments, `Sequence`-annotated
-assignments, and returns annotated as `Sequence`. Explicit mutable-list
-contracts and calls to unknown consumers are left alone.
-
-**PY004:** prefer `for user in result:` to `for user in result.all():`.
-Only direct synchronous `for` loops over recognized buffered/synchronous query
-results are checked. Streaming APIs (`stream`, `stream_scalars`), `AsyncResult`
-types, `yield_per`, unknown result objects, and materialized lists used elsewhere
-are left alone.
-
-**PY005:** prefer `col(User.id).in_(member.user_id for member in members)` to
-`col(User.id).in_([member.user_id for member in members])`. Detection requires a
-recognized SQLAlchemy/SQLModel expression constructor (`column`, `col`, etc.) or
-a known `select(...).where(...)`, `filter(...)`, or `having(...)` expression
-context. Existing list variables and unrelated methods named `in_` are ignored.
-
-These are local static heuristics, not a full type checker: they do not infer
-session types across files or prove that an untyped variable is never mutated.
-Review warnings before removing a copy that intentionally provides mutability.
-
-## Named domain instances
-
-**PY006:** assign domain instances before calling methods on them:
-
-```python
-database = Postgres(host, port, username, password, sslmode)
-usage = await database.usage()
-
-cluster = Kubernetes(config)
-logs = await cluster.applications.logs(name)
-```
-
-The explicit class-name allowlist is `Postgres` and `Kubernetes`. Imported aliases
-and module-qualified constructors are recognized. Other classes and ordinary
-fluent APIs are not subject to this rule.
-
-## FastAPI checks
-
-These checks recognize locally constructed or annotated `FastAPI`/`APIRouter`
-objects, including import aliases. They do not infer imported router instances
-across files. Both synchronous and asynchronous HTTP endpoints are checked.
-
-**PY009:** declare schemas explicitly, even when a function has a return annotation:
-
-```python
-@router.get('/users', response_model=list[UserResponse])
-async def list_users():
-    return await users.fetch()
-```
-
-Exemptions include HEAD routes, bodyless statuses (1xx, 204, 205, 304), explicit
-streaming/redirect/raw response classes, raw-response annotations, and functions
-whose explicit returns are all recognized raw response objects. WebSocket
-handlers are not checked. `response_model=None` is an explicit schema opt-out;
-unknown `**route_options` are skipped rather than guessed. Merely setting
-`response_class=JSONResponse` does not exempt a normal JSON endpoint.
-
-**PY010:** return the payload, not
-`{'success': True, 'detail': 'Users fetched', 'data': users}`. Direct dictionary
-returns, `dict(...)` constructors, and locally assigned envelopes are recognized.
-The warning requires literal `success=True` plus `detail` or `data`. Non-route
-functions and ordinary payload dictionaries are not flagged.
-
-External protocol contracts can explicitly opt out without dropping their schema:
-
-```python
-@router.post(
-    '/external-protocol',
-    response_model=ProtocolResponse,
-    openapi_extra={'x-external-protocol': True},
-)
-async def protocol_endpoint():
-    return {'success': True, 'detail': 'OK', 'data': payload}
-```
-
-`response_model=None` alone does **not** exempt success envelopes from PY010.
-All these rules remain warnings; no framework needs to be installed for scanning.
-
-## Repository-specific policies
-
-PY013 and PY014 are **always enabled**. These are deliberately fixed policies
-adopted by this tool, not claims about general Python best practices.
-
-- **PY013:** warns on absolute `src.errors` imports, its submodules, and
-  `from src import errors`. Use FastAPI's `HTTPException` directly instead of
-  recreating the retired exception-to-HTTP translation layer. Relative and
-  dynamic imports are not resolved.
-- **PY014:** detects only leading module docstrings via `ast.get_docstring`.
-  Function/class docstrings are unaffected. A module is exempt when its
-  `__doc__` is used explicitly for help in a recognized argparse, Click, or
-  Typer constructor/decorator (`description`, `epilog`, or `help`).
-
-## Test framework and parametrization rules
-
-**PY016** flags absolute `unittest` imports, including aliases, `from` imports,
-and submodules such as `unittest.mock`. Use pytest-style tests, plain assertions,
-fixtures, and `pytest.raises` instead. For mocking, consider pytest's `monkeypatch`
-fixture or the pytest-mock plugin. Relative and dynamic imports are not resolved.
-This is a fixed policy, not an automatic migration: existing tests are never rewritten.
-
-**PY017** checks annotated fields in classes directly inheriting from imported
-Pydantic `BaseModel` (including aliases and module-qualified imports). Within
-each blank-line-separated section, field names should run from shortest to
-longest; equal-length names have no required order. Non-field statements,
-private attributes, `model_config`, and recognized `ClassVar` annotations also
-separate field runs. Indirect or imported custom model bases are not inferred.
-This is a repository style policy, not a general Python requirement. Findings
-are warnings only: review validation dependencies, default factories, and any
-intentional serialization order before manually reordering. No fields are
-automatically moved.
-
-**PY015** flags exactly one literal case in a known `pytest.mark.parametrize`
-decorator. Dynamic cases, `pytest.param(...)`, explicit IDs or scopes, indirect
-fixtures, tests using `request`, and modules with known collection hooks are
-left alone. Ordinary multi-case tests are unaffected.
-
-The following rules identify **review candidates**, not proven safe edits.
-They have the same warning-only exit behavior as every other rule. Do not
-mechanically apply their suggestions.
-
-- **PY101:** flags a direct `return Model.model_validate(value)` when all known
-  route response-model contracts match `Model`. Explicit validation options,
-  computed/transformed inputs, external protocols, and locally visible model
-  validators or custom initialization are exempt. Imported model validators
-  cannot be inspected; preserve intentional transformations.
-- **PY106:** detects a walrus binding in one constructor argument reused by a
-  later argument inside a list/set/dict comprehension or generator expression.
-  Constructors are recognized conservatively by capitalized names. An explicit
-  loop makes evaluation dependencies clear.
-- **PY107:** checks simple list comprehensions passed directly to built-in
-  `sum`, `min`, `max`, `tuple`, `set`, or `frozenset`, and adjacent single-use
-  temporary lists in functions. Unknown consumers, short-circuiting `any`/`all`,
-  effectful calls/awaits, async comprehensions, filters, and reused snapshots are
-  skipped. Attribute/property access can still have effects: verify snapshot
-  semantics and exception timing before switching to a generator.
-- **PY108:** identifies known `execute(...).scalars()` result consumption and
-  single-element row unpacking from syntactically single-selection queries.
-  Prefer `session.scalars(statement)`, but retain the existing `one`,
-  `one_or_none`, or other cardinality/null-handling behavior. Multi-column
-  unpacking and unknown query shapes are not rewritten or simplified.
-- **PY109:** flags known query rows materialized directly for `len`, `bool`, or
-  truth testing, plus local row variables whose only uses are size/truth checks.
-  Review an existence or bounded query while preserving locking, transaction
-  behavior, and threshold semantics. It does not rewrite SQL.
-- **PY110:** reviews exact private positional forwarding functions and private
-  empty subclasses, plus the known empty FastAPI/Starlette test-client subclass
-  pattern. Public functions, typed/documented/decorated contracts, inherited
-  framework methods, and subclasses adding behavior are exempt. Preserve any
-  meaningful compatibility or lifecycle boundary.
-- **PY111:** reviews plain classes with only a directly borrowed client field
-  and instance methods using it. Owned clients, extra state, inheritance,
-  decorators, documented boundaries, properties, and lifecycle hooks are skipped.
-  Namespaced functions may be simpler; the checker never removes a class.
-- **PY113:** flags an immediate commit/refresh pair on the same known session.
-  It does **not** prove the refresh redundant. Before removing it, check
-  `expire_on_commit`, server-generated defaults, and required relationships.
-- **PY114:** reviews uppercase function-local and private module constants assigned
-  an immutable literal and read exactly once later in the same scope. For example,
-  consider replacing `TIMEOUT = 30; connect(timeout=TIMEOUT)` with
-  `connect(timeout=30)`. Rebinding, nested-scope/comprehension references, annotated
-  assignments, mutable or computed values, class constants, public module names,
-  explicit module exports, and recognized dynamic namespace access are skipped.
-  Preserve names that explain units, domain meaning, or intentional boundaries;
-  this warning is not proof that inlining improves readability or preserves identity.
-
 ## Coding agents
 
 Add this instruction to your project's `AGENTS.md` (or equivalent):
@@ -391,15 +174,6 @@ No automatic rewriting, agent configuration changes, or hooks are installed.
 
 ## Library API
 
-```python
-from pathlib import Path
-from pyunslop import check_file, find_python_files
-
-for path in find_python_files([Path("src")]):
-    for warning in check_file(path):
-        print(warning)
-```
-
 `check_file` runs the native rules and returns structured `Warning` objects with `path`, `line`, `column`,
 `code`, and `message` fields. Locations are one-based. The same fixed settings
 apply to the library API. File discovery raises `OSError` for missing paths or
@@ -410,15 +184,6 @@ For the same batched Ruff checks used by the CLI, call
 the project root. It returns the same warning objects; Ruff engine failures
 raise `RuntimeError`.
 
-```python
-from pathlib import Path
-from pyunslop import find_python_files
-from pyunslop.ruff import check_ruff
-
-for warning in check_ruff(list(find_python_files([Path(".")]))):
-    print(warning)
-```
-
 Ruff does not expose a supported in-process Python linting API via `import ruff`.
 `check_ruff` invokes the installed Ruff executable in a subprocess and parses its
 JSON diagnostics. The executable is located through installed package metadata,
@@ -428,8 +193,8 @@ format checks are read-only; findings are returned as warnings rather than raise
 ## Development
 
 ```sh
-python -m pip install -e .
-python -m unittest discover -s tests -v
+python -m pip install -e '.[test]'
+python -m pytest -v
 ```
 
 ## Release
@@ -447,6 +212,9 @@ git push origin vX.Y.Z
 ```
 
 The release workflow tests and builds the package, then publishes it to PyPI.
+It verifies that the tagged commit belongs to the default branch and creates a
+matching GitHub Release with generated notes only after publishing succeeds.
+The PyPI version and GitHub Release therefore use the same tag and source commit.
 The package version is taken from the tag (`v1.2.3` publishes version `1.2.3`);
 the version in `pyproject.toml` does not need to be changed before tagging.
 

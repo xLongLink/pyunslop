@@ -5,7 +5,7 @@ Source must match the bundled Ruff formatter preset: line length 140, Python
 configuration does not override the preset. This check is read-only; formatting
 differences are warnings and never automatically edit source or fail the CLI.
 
-```example
+```py
 # Bad
 value=1
 
