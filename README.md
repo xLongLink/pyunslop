@@ -93,9 +93,6 @@ ban-relative-imports = "all"
 no-sections = true
 length-sort = true
 split-on-trailing-comma = false
-
-[tool.ruff.lint.pep8-naming]
-extend-ignore-names = ["visit_*"]
 ```
 
 <br />
