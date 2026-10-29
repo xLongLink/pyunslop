@@ -68,7 +68,6 @@ Run `ruff check` and `ruff format --check` separately; pyunslop does not run Ruf
 ```toml
 [tool.ruff]
 line-length = 140
-target-version = "py310"
 
 [tool.ruff.format]
 skip-magic-trailing-comma = true
