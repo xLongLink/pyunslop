@@ -64,9 +64,6 @@ The rules complement an exising ruff configuration, this is our suggestion:
 
 Install Ruff separately and add these settings to your `pyproject.toml`.
 Run `ruff check` and `ruff format --check` separately; pyunslop does not run Ruff.
-Comment spacing is delegated to Ruff's E262/E265, and direct list comprehensions
-passed to `sum`, `min`, `max`, or `set` to C419/C403. Preview mode is required
-for the comment checks and C419's `sum`/`min`/`max` coverage.
 
 ```toml
 [tool.ruff]
