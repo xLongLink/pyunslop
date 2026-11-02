@@ -153,6 +153,7 @@ def check_separation(source: Source) -> list[Finding]:
             and line_number - 1 not in headers
             and line_number not in continued
         ):
+
             # Report only the block's opening comment.
             findings.append(Finding(line_number, 1, "SLOP002", "expected a blank line before the comment block"))
     return findings
@@ -164,6 +165,7 @@ def check_suppressions(source: Source) -> list[Finding]:
     for token in source.comments:
         match = NOQA_DIRECTIVE.search(token.string)
         if match:
+
             # Match offsets are relative to the token, not the physical source line.
             line, column = token.start
             findings.append(Finding(line, column + match.start() + 1, "SLOP003", "noqa suppression directives are forbidden"))

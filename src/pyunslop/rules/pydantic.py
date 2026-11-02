@@ -31,6 +31,7 @@ def check_fields(node: ast.ClassDef, context: ModelAnalyzer) -> list[Finding]:
     findings = []
     previous: ast.AnnAssign | None = None
     for statement in node.body:
+
         # Methods, private state, and configuration terminate a field run.
         if not isinstance(statement, ast.AnnAssign) or not isinstance(statement.target, ast.Name) or not is_field(statement, context):
             previous = None

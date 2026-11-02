@@ -58,20 +58,6 @@ DO run `uvx pyunslop` and fix any warnings
 
 <br />
 
-Ruff is installed with pyunslop. Every run also checks lint and formatting with
-the bundled preset, without modifying files. SLOP and Ruff findings share one
-sorted report and summary. Exit codes are `0` for a clean project, `1` for lint or
-format findings, and `2` for operational failures. No Ruff configuration is needed,
-and project Ruff settings do not override the bundled preset.
-
-Native Python checks use Ruff's file discovery, including Git ignore rules.
-Unreadable files are operational errors rather than clean results. Each Ruff
-invocation, including discovery, has a 120-second timeout.
-Newline-containing paths are unsupported and cause an operational error if
-encountered during discovery.
-
-<br />
-
 ---
 
 <div align="center">

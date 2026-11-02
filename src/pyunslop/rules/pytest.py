@@ -56,6 +56,7 @@ class ParametrizationAnalyzer(BindingVisitor):
         args = [*node.args.posonlyargs, *node.args.args, *node.args.kwonlyargs]
         if not self.collection_hooks and not any(argument.arg == "request" for argument in args):
             for decorator in node.decorator_list:
+
                 # Preserve decorators whose case carries fixture or collection semantics.
                 if single_literal_case(decorator, self.qualified):
                     self.findings.append(Finding.at(decorator, CODE, "replace single literal-case parametrization with a direct test"))

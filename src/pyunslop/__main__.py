@@ -16,11 +16,13 @@ def main() -> int:
     try:
         paths = list(find_python_files([Path()]))
         for path in paths:
+
             # Native checks share parsing state within each file.
             findings.extend(check_file(path))
         findings.extend(check_ruff())
 
     except (OSError, RuntimeError) as exc:
+
         # Execution failures have a different status from lint findings.
         print(f"Could not scan project: {exc}", file=sys.stderr)
         return 2

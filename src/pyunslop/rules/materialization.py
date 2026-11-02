@@ -65,6 +65,7 @@ def check_call(node: ast.Call, context: BindingVisitor) -> list[Finding]:
         and not node.keywords
         and simple_comprehension(node.args[0])
     ):
+
         # Generator conversion still requires checking snapshot and exception timing.
         return [
             Finding.at(node.args[0], CODE, "review a generator for this iterable-only consumer; preserve snapshot and exception timing")

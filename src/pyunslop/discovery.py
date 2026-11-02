@@ -33,6 +33,7 @@ def find_python_files(paths: Iterable[Path]) -> Iterator[Path]:
     seen: set[Path] = set()
     scanned: set[Path] = set()
     for path in paths:
+
         # Explicit roots must be representable in Ruff's line-delimited file list.
         if "\n" in str(path) or "\r" in str(path):
             raise RuntimeError("Newline-containing paths are unsupported")
@@ -43,6 +44,7 @@ def find_python_files(paths: Iterable[Path]) -> Iterator[Path]:
         if path.is_file():
             candidates = [path] if path.suffix == ".py" else []
         elif path.is_dir():
+
             # Cache directory identities without changing explicit-file bypasses.
             root = path.resolve()
             if root in scanned:
@@ -50,6 +52,7 @@ def find_python_files(paths: Iterable[Path]) -> Iterator[Path]:
             candidates = directory_files(path)
             scanned.add(root)
         else:
+
             # Pipes and devices must not be passed to a scanner that may open them.
             raise OSError(f"{path}: expected a regular file or directory")
 
