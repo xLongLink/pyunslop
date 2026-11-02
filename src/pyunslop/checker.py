@@ -26,10 +26,10 @@ def check_file(path: Path) -> list[Diagnostic]:
     # All native checks share one parse; sort their combined diagnostics by location.
     findings = chain(
         check_comments(facts),
-        check_module_doc(facts),
-        check_pytest(facts),
+        check_module_doc(facts.tree),
+        check_pytest(facts.tree),
         check_pydantic(facts),
-        check_simplifications(facts),
+        check_simplifications(facts.tree),
         analyze_queries(facts.tree),
         analyze_endpoints(facts.tree),
     )

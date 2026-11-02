@@ -16,6 +16,11 @@ class Endpoint:
     all_returns_raw: bool = True
 
 
+def _qualified_kind(name: str) -> str:
+    """Classify resolved router and raw-response identities."""
+    return "@router" if name in http.ROUTER_TYPES else http.annotation_kind(name)
+
+
 class EndpointAnalyzer(BindingVisitor):
     """Own FastAPI route recognition, response provenance, and diagnostics."""
 
@@ -28,16 +33,14 @@ class EndpointAnalyzer(BindingVisitor):
 
     def annotation_kind(self, node: ast.expr | None) -> str:
         """Recognize router and raw-response contracts."""
-        name = self.annotation(node)
-        return "@router" if name in http.ROUTER_TYPES else http.annotation_kind(name)
+        return _qualified_kind(self.annotation(node))
 
     def kind(self, node: ast.AST | None) -> str:
         """Propagate only endpoint-specific values through local bindings."""
         if http.is_success_envelope(node, self.qualified):
             return "@envelope"
         if isinstance(node, ast.Call):
-            name = self.qualified(node.func)
-            return "@router" if name in http.ROUTER_TYPES else http.annotation_kind(name)
+            return _qualified_kind(self.qualified(node.func))
         return super().kind(node)
 
     def routes_for(self, node: FunctionNode) -> list[ast.Call]:

@@ -1,5 +1,5 @@
 import pytest
-from tests.support import RunCLI, native_codes
+from tests.support import RunCLI, CheckNative, native_codes
 
 
 @pytest.mark.parametrize("values", ["[1]", "(1,)", "[(1,)]"])
@@ -65,3 +65,18 @@ def test_preserves_request_and_collection_hook_exemptions(run_cli: RunCLI, sourc
 
     # Assert
     assert native_codes(result) == []
+
+
+@pytest.mark.parametrize(
+    ("parameters", "codes"),
+    [("request, /, value", []), ("value, *, request", []), ("value, *request", ["SLOP013"]), ("value, **request", ["SLOP013"])],
+)
+def test_request_exemption_applies_only_to_fixed_parameters(check_native: CheckNative, parameters: str, codes: list[str]) -> None:
+    """Do not mistake a variadic name for pytest's explicit request fixture."""
+    source = f"import pytest\n@pytest.mark.parametrize('value', [1])\ndef test_positive({parameters}):\n    pass\n"
+
+    # Act
+    findings = check_native(source)
+
+    # Assert
+    assert [finding.code for finding in findings] == codes

@@ -20,5 +20,5 @@ DO use this structure for merge requests:
 	<title>Use the commit message structure</title>
 	<summary>What changed and why</summary>
 	<validation>Checks run and results, or why not run</validation>
-	<labels>Change-type labels from .github/release.yml and applicable area labels: api|sdk|web</labels>
+	<labels>Use applicable labels already defined in the repository</labels>
 </merge-request>

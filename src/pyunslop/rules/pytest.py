@@ -2,11 +2,11 @@ from __future__ import annotations
 
 import ast
 from typing import TYPE_CHECKING
+from pyunslop.ast_utils import fixed_arguments
 from pyunslop.diagnostics import Finding
 from pyunslop.analysis.bindings import BindingVisitor
 
 if TYPE_CHECKING:
-    from pyunslop.source import Source
     from pyunslop.contracts import FunctionNode, QualifiedName
 
 CODE = "SLOP013"
@@ -41,19 +41,19 @@ def single_literal_case(decorator: ast.expr, qualified: QualifiedName) -> bool:
 class ParametrizationAnalyzer(BindingVisitor):
     """Keep collection-hook exemptions local to parametrization checks."""
 
-    def __init__(self, source: Source) -> None:
+    def __init__(self, tree: ast.Module) -> None:
         """Collect module hooks before resolving test decorators."""
         super().__init__()
         self.findings: list[Finding] = []
         self.collection_hooks = any(
             isinstance(item, (ast.FunctionDef, ast.AsyncFunctionDef))
             and item.name in {"pytest_generate_tests", "pytest_collection_modifyitems"}
-            for item in source.tree.body
+            for item in tree.body
         )
 
     def visit_FunctionDef(self, node: FunctionNode) -> None:
         """Review single-case parametrization without fixture or collection behavior."""
-        args = [*node.args.posonlyargs, *node.args.args, *node.args.kwonlyargs]
+        args = fixed_arguments(node.args)
         if not self.collection_hooks and not any(argument.arg == "request" for argument in args):
             for decorator in node.decorator_list:
                 # Preserve decorators whose case carries fixture or collection semantics.
@@ -64,8 +64,8 @@ class ParametrizationAnalyzer(BindingVisitor):
     visit_AsyncFunctionDef = visit_FunctionDef
 
 
-def check_pytest(source: Source) -> list[Finding]:
+def check_pytest(tree: ast.Module) -> list[Finding]:
     """Review parametrization with fresh per-file collection state."""
-    analyzer = ParametrizationAnalyzer(source)
-    analyzer.visit(source.tree)
+    analyzer = ParametrizationAnalyzer(tree)
+    analyzer.visit(tree)
     return analyzer.findings

@@ -1,6 +1,6 @@
 import ast
 import pytest
-from pyunslop.ast_utils import adjacent_statement
+from pyunslop.ast_utils import fixed_arguments, adjacent_statement
 
 
 @pytest.mark.parametrize(
@@ -33,3 +33,15 @@ def test_statement_not_in_parent_has_no_neighbor() -> None:
 
     # Act / Assert
     assert adjacent_statement(parent, unrelated, 1) is None
+
+
+def test_fixed_arguments_preserve_order_and_exclude_variadics() -> None:
+    """Include all fixed parameter categories without promoting variadic names."""
+    function = ast.parse("def collect(first, /, second, *rest, third, **options):\n    pass\n").body[0]
+    assert isinstance(function, ast.FunctionDef)
+
+    # Act
+    arguments = fixed_arguments(function.args)
+
+    # Assert
+    assert [argument.arg for argument in arguments] == ["first", "second", "third"]

@@ -7,7 +7,6 @@ from pyunslop.diagnostics import Finding
 from pyunslop.analysis.bindings import BindingVisitor
 
 if TYPE_CHECKING:
-    from pyunslop.source import Source
     from pyunslop.contracts import FunctionNode, QualifiedName
 
 CODE = "SLOP012"
@@ -51,15 +50,15 @@ class ModuleDocAnalyzer(BindingVisitor):
     visit_AsyncFunctionDef = visit_FunctionDef
 
 
-def check_module_doc(source: Source) -> list[Finding]:
+def check_module_doc(tree: ast.Module) -> list[Finding]:
     """Allow Alembic revision headers and documentation consumed by CLI help."""
-    doc = ast.get_docstring(source.tree)
+    doc = ast.get_docstring(tree)
     if doc is None or ALEMBIC_HEADER.search(doc):
         return []
     analyzer = ModuleDocAnalyzer()
-    analyzer.visit(source.tree)
+    analyzer.visit(tree)
 
     # Merely referencing __doc__ does not establish a CLI-help exemption.
     if analyzer.cli_doc_used:
         return []
-    return [Finding.at(source.tree.body[0], CODE, "repository policy forbids leading module docstrings")]
+    return [Finding.at(tree.body[0], CODE, "repository policy forbids leading module docstrings")]

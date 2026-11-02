@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import ast
 from typing import TYPE_CHECKING
+from pyunslop.ast_utils import fixed_arguments
 from pyunslop.diagnostics import Finding
 
 if TYPE_CHECKING:
@@ -21,7 +22,7 @@ def check_function(node: FunctionNode, context: BindingVisitor) -> list[Finding]
         return []
 
     # Defaults and annotations establish intentional call contracts.
-    args = [*node.args.posonlyargs, *node.args.args, *node.args.kwonlyargs]
+    args = fixed_arguments(node.args)
     if node.args.defaults or node.args.kw_defaults or any(arg.annotation for arg in args):
         return []
 

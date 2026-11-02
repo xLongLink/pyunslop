@@ -1,6 +1,5 @@
 import ast
 from pyunslop.rules import wrappers, borrowed_client, materialization, named_instances
-from pyunslop.source import Source
 from pyunslop.contracts import FunctionNode
 from pyunslop.diagnostics import Finding
 from pyunslop.rules.constants import single_use_constants
@@ -47,8 +46,8 @@ class SimplificationAnalyzer(BindingVisitor):
         self.generic_visit(node)
 
 
-def check_simplifications(source: Source) -> list[Finding]:
+def check_simplifications(tree: ast.AST) -> list[Finding]:
     """Return conservative syntax-only review candidates."""
     analyzer = SimplificationAnalyzer()
-    analyzer.visit(source.tree)
-    return [*analyzer.findings, *check_comprehensions(source)]
+    analyzer.visit(tree)
+    return [*analyzer.findings, *check_comprehensions(tree)]

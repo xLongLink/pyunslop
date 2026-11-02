@@ -1,6 +1,7 @@
 import ast
 from typing import TypeVar
 from dataclasses import dataclass
+from pyunslop.ast_utils import fixed_arguments
 from pyunslop.contracts import LoopNode, WithNode, FunctionNode
 
 Value = TypeVar("Value")
@@ -99,7 +100,7 @@ class BindingVisitor(ast.NodeVisitor):
         self.bindings[node.name] = Binding()
 
         # Parameters shadow outer bindings, including unannotated names.
-        arguments = [*node.args.posonlyargs, *node.args.args, *node.args.kwonlyargs]
+        arguments = fixed_arguments(node.args)
         arguments += [arg for arg in (node.args.vararg, node.args.kwarg) if arg]
         try:
             for argument in arguments:

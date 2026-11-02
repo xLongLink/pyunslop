@@ -1,4 +1,3 @@
-import ast
 import pytest
 from tests.support import RunCLI, native_codes
 from pyunslop.source import Source
@@ -64,7 +63,7 @@ def test_preserves_budget_resets_and_collapsed_data(run_cli: RunCLI, source: str
 )
 def test_literal_exclusions_preserve_executable_lines(source: str, lines: set[int]) -> None:
     """Collapse nested data without hiding executable suffixes or computed items."""
-    facts = Source(source, ast.parse(source))
+    facts = Source(source)
 
     # Act
     _, counted = counted_lines(facts)

@@ -4,6 +4,7 @@ from tests.support import RunCLI, native_codes
 CANDIDATES = (
     pytest.param("def _fetch(value):\n    return fetch(value)\nresult = _fetch(value)\n", id="private-forwarder"),
     pytest.param("async def _fetch(value):\n    return await fetch(value)\n", id="async-forwarder"),
+    pytest.param("def _fetch(value, /):\n    return fetch(value)\n", id="positional-only-forwarder"),
     pytest.param("class _Alias(Base):\n    pass\n", id="private-empty-subclass"),
     pytest.param("from fastapi.testclient import TestClient as Base\nclass TestClient(Base):\n    pass\n", id="test-client-subclass"),
 )
@@ -34,6 +35,10 @@ EXEMPTIONS = (
         id="inherited-framework-method",
     ),
     pytest.param('class _Boundary(Base):\n    """Public compatibility boundary."""\n    pass\n', id="documented-subclass"),
+    # Keyword-only and variadic signatures retain their distinct call contracts.
+    pytest.param("def _fetch(value, *, mode):\n    return fetch(value, mode)\n", id="keyword-only-contract"),
+    pytest.param("def _fetch(*values):\n    return fetch(*values)\n", id="variadic-positional-contract"),
+    pytest.param("def _fetch(**options):\n    return fetch(**options)\n", id="variadic-keyword-contract"),
 )
 
 

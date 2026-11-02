@@ -6,7 +6,6 @@ from collections.abc import Sequence
 from pyunslop.diagnostics import Finding
 
 if TYPE_CHECKING:
-    from pyunslop.source import Source
     from pyunslop.contracts import ComprehensionNode
 
 CODE = "SLOP016"
@@ -48,14 +47,14 @@ def comprehension_dependencies(node: ComprehensionNode, checked_calls: set[ast.C
     return findings
 
 
-def check_comprehensions(source: Source) -> list[Finding]:
+def check_comprehensions(tree: ast.AST) -> list[Finding]:
     """Report each dependent binding once, including nested comprehensions."""
     reported: set[ast.NamedExpr] = set()
     checked_calls: set[ast.Call] = set()
     findings = []
 
     # Keep nested iterable and filter calls reachable through enclosing output expressions.
-    for node in ast.walk(source.tree):
+    for node in ast.walk(tree):
         if not isinstance(node, (ast.ListComp, ast.SetComp, ast.DictComp, ast.GeneratorExp)):
             continue
 

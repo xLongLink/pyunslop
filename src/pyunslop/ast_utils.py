@@ -2,6 +2,11 @@ import ast
 from collections.abc import Iterator
 
 
+def fixed_arguments(arguments: ast.arguments) -> list[ast.arg]:
+    """Return positional and keyword-only parameters in declaration order, excluding variadics."""
+    return [*arguments.posonlyargs, *arguments.args, *arguments.kwonlyargs]
+
+
 def immutable_literal(node: ast.AST) -> bool:
     """Recognize literals without mutable members or runtime computation."""
     if isinstance(node, ast.Constant):
