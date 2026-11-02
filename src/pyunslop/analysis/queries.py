@@ -50,8 +50,9 @@ class QueryAnalyzer(BindingVisitor):
             return self.annotation(parent.annotation) in {"typing.Sequence", "collections.abc.Sequence"}
 
         # Unknown return types and consumers may require actual mutable lists.
-        if isinstance(parent, ast.Return) and self.functions:
-            return self.annotation(self.functions[-1].returns) in {"typing.Sequence", "collections.abc.Sequence"}
+        function = self.current_function
+        if isinstance(parent, ast.Return) and function is not None:
+            return self.annotation(function.returns) in {"typing.Sequence", "collections.abc.Sequence"}
         return False
 
     def visit_Attribute(self, node: ast.Attribute) -> None:
@@ -62,9 +63,8 @@ class QueryAnalyzer(BindingVisitor):
 
     def visit_Return(self, node: ast.Return) -> None:
         """Report each mutable query-row return contract once."""
-        if self.functions:
-            function = self.functions[-1]
-
+        function = self.current_function
+        if function is not None:
             # Point to the contract once, even when several returns have the same issue.
             if (
                 self.annotation(function.returns) in {"list", "typing.List"}
@@ -189,9 +189,9 @@ class QueryAnalyzer(BindingVisitor):
         if self.kind(node) != "@rows" or parent is None:
             return []
         candidate = self.size_use(node, parent)
-        if isinstance(parent, ast.Assign) and len(parent.targets) == 1 and isinstance(parent.targets[0], ast.Name) and self.functions:
+        function = self.current_function
+        if isinstance(parent, ast.Assign) and len(parent.targets) == 1 and isinstance(parent.targets[0], ast.Name) and function is not None:
             name = parent.targets[0].id
-            function = self.functions[-1]
 
             # Closure reads count as data reuse even outside this statement block.
             uses = name_loads(function, name)

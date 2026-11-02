@@ -46,14 +46,15 @@ def temporary_iterable_pair(function: FunctionNode, assignment: ast.stmt, follow
 
 def check_assign(node: ast.Assign, context: BindingVisitor) -> list[Finding]:
     """Review local temporary lists at the point their consumer is resolved."""
-    if not context.functions:
+    function = context.current_function
+    if function is None:
         return []
     parent = context.parents[-2]
 
     # Only an immediately adjacent consumer in the same statement list is eligible.
     following = adjacent_statement(parent, node, 1)
     if following is not None:
-        return temporary_iterable_pair(context.functions[-1], node, following, context.qualified)
+        return temporary_iterable_pair(function, node, following, context.qualified)
     return []
 
 

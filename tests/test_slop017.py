@@ -1,5 +1,5 @@
 import pytest
-from tests.support import RunCLI, native_codes
+from tests.support import RunCLI, CheckNative, native_codes
 
 
 @pytest.mark.parametrize("consumer", ["tuple", "frozenset"])
@@ -79,3 +79,14 @@ def test_delegates_direct_comprehensions_to_real_ruff(run_cli: RunCLI, consumer:
     assert result.returncode == 1
     assert native_codes(result) == []
     assert f": {code} " in result.stdout
+
+
+def test_nested_temporary_lists_keep_their_function_owner(check_native: CheckNative) -> None:
+    """Analyze nested temporaries independently and resume the enclosing function."""
+    source = "def outer(values):\n    async def inner():\n        pieces = [value * 2 for value in values]\n        return sum(pieces)\n    amounts = [value * 2 for value in values]\n    return sum(amounts)\n"
+
+    # Act
+    findings = check_native(source)
+
+    # Assert
+    assert [(finding.code, finding.line) for finding in findings] == [("SLOP017", 3), ("SLOP017", 5)]

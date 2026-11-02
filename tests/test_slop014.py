@@ -26,6 +26,40 @@ def test_reports_shorter_fields_in_recognized_models(run_cli: RunCLI, imported: 
     assert "validation dependencies" in result.stdout
 
 
+def test_multiline_defaults_do_not_split_field_runs(run_cli: RunCLI) -> None:
+    """Ignore blank lines inside defaults when locating section boundaries."""
+    source = """
+        from pydantic import BaseModel
+        class UserResponse(BaseModel):
+            description: str = (
+                "default"
+
+            )
+            id: int
+    """
+
+    result = run_cli(source)
+
+    assert native_codes(result) == ["SLOP014"]
+    assert "example.py:7:5: SLOP014" in result.stdout
+
+
+def test_recognizes_nested_models_in_unrecognized_classes(run_cli: RunCLI) -> None:
+    """Traverse class bodies even when their own bases are not recognized."""
+    source = """
+        from pydantic import BaseModel
+        class Container:
+            class UserResponse(BaseModel):
+                description: str
+                id: int
+    """
+
+    result = run_cli(source)
+
+    assert native_codes(result) == ["SLOP014"]
+    assert "example.py:5:9: SLOP014" in result.stdout
+
+
 EXEMPTIONS = (
     # Ordered fields and equal-length ties satisfy the policy.
     pytest.param(
@@ -35,11 +69,16 @@ EXEMPTIONS = (
     pytest.param(
         "from pydantic import BaseModel\nclass UserResponse(BaseModel):\n    description: str\n\n    id: int\n", id="blank-line-section"
     ),
-    # Private attributes and ClassVars split field runs.
+    # Methods, private attributes, and ClassVars split field runs.
+    pytest.param(
+        "from pydantic import BaseModel\nclass UserResponse(BaseModel):\n    description: str\n    def method(self):\n        pass\n    id: int\n",
+        id="method-boundary",
+    ),
     pytest.param(
         "from pydantic import BaseModel\nclass UserResponse(BaseModel):\n    description: str\n    _private: str\n    id: int\n",
         id="private-state-boundary",
     ),
+    # ClassVars are excluded by their resolved annotation identity.
     pytest.param(
         "from typing import ClassVar as CV\nfrom pydantic import BaseModel\nclass UserResponse(BaseModel):\n    description: str\n    setting: CV[int]\n    id: int\n",
         id="classvar-boundary",

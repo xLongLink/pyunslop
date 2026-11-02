@@ -1,5 +1,5 @@
 import pytest
-from tests.support import RunCLI, native_codes
+from tests.support import RunCLI, CheckNative, native_codes
 
 CANDIDATES = (
     pytest.param("return bool(result.all())", id="direct-bool"),
@@ -53,3 +53,14 @@ def test_preserves_data_consumers_and_existence_queries(run_cli: RunCLI, source:
 
     # Assert
     assert native_codes(result) == []
+
+
+def test_nested_size_only_load_does_not_inherit_outer_data_use(check_native: CheckNative) -> None:
+    """Find nested size-only rows even when the outer function consumes its rows as data."""
+    source = "from sqlalchemy.engine import Result\ndef outer(result: Result):\n    rows = result.all()\n    consume(rows)\n    async def inner(result: Result):\n        rows = result.all()\n        return bool(rows)\n    return inner\n"
+
+    # Act
+    findings = check_native(source)
+
+    # Assert
+    assert [(finding.code, finding.line) for finding in findings] == [("SLOP019", 6)]

@@ -54,6 +54,24 @@ EXEMPTIONS = (
         "class Users:\n    def __init__(self, client):\n        self.client = client\n    def __enter__(self):\n        return self.client\n",
         id="lifecycle-hook",
     ),
+    # Escaping self exposes more than the borrowed client.
+    pytest.param(
+        "class Users:\n    def __init__(self, client):\n        self.client = client\n    def register(self):\n        return register(self)\n",
+        id="passing-self",
+    ),
+    pytest.param(
+        "class Users:\n    def __init__(self, client):\n        self.client = client\n    def fetch(self):\n        return self\n",
+        id="returning-self",
+    ),
+    # State changes outside construction establish meaningful behavior.
+    pytest.param(
+        "class Users:\n    def __init__(self, client):\n        self.client = client\n    def replace(self, client):\n        self.client = client\n",
+        id="rebinding-client",
+    ),
+    pytest.param(
+        "class Users:\n    def __init__(self, client):\n        self.client = client\n    def clear(self):\n        del self.client\n",
+        id="deleting-client",
+    ),
 )
 
 

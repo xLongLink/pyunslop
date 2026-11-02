@@ -55,3 +55,15 @@ def test_preserves_intentional_or_unknown_list_consumers(check_native: CheckNati
 
     # Assert
     assert findings == []
+
+
+@pytest.mark.parametrize(("outer_kind", "inner_kind"), [("def", "async def"), ("async def", "def")])
+def test_nested_row_copies_follow_their_own_return_contract(check_native: CheckNative, outer_kind: str, inner_kind: str) -> None:
+    """Do not inherit sequence permission from an enclosing function or leak it back."""
+    source = f"from collections.abc import Sequence\nfrom sqlalchemy.engine import Result\n{outer_kind} outer(result: Result) -> Sequence[User]:\n    {inner_kind} inner(result: Result):\n        return list(result.all())\n    return list(result.all())\n"
+
+    # Act
+    findings = check_native(source)
+
+    # Assert
+    assert [(finding.code, finding.line) for finding in findings] == [("SLOP006", 6)]

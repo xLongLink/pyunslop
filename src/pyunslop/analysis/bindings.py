@@ -27,7 +27,6 @@ class BindingVisitor(ast.NodeVisitor):
         self.bindings: dict[str, Binding] = {}
         self.contracts: dict[str, str] = {}
         self.parents: list[ast.AST] = []
-        self.functions: list[FunctionNode] = []
 
     def visit(self, node: ast.AST) -> None:
         """Expose the active ancestry while preserving normal visitor dispatch."""
@@ -36,6 +35,15 @@ class BindingVisitor(ast.NodeVisitor):
             super().visit(node)
         finally:
             self.parents.pop()
+
+    @property
+    def current_function(self) -> FunctionNode | None:
+        """Find the nearest function body containing the current node."""
+        for index in range(len(self.parents) - 2, -1, -1):
+            parent = self.parents[index]
+            if isinstance(parent, (ast.FunctionDef, ast.AsyncFunctionDef)) and self.parents[index + 1] in parent.body:
+                return parent
+        return None
 
     def qualified(self, node: ast.AST | None) -> str:
         """Resolve identities independently of inferred value categories."""
@@ -89,7 +97,6 @@ class BindingVisitor(ast.NodeVisitor):
         outer, contracts = self.bindings.copy(), self.contracts.copy()
         self.contracts = {}
         self.bindings[node.name] = Binding()
-        self.functions.append(node)
 
         # Parameters shadow outer bindings, including unannotated names.
         arguments = [*node.args.posonlyargs, *node.args.args, *node.args.kwonlyargs]
@@ -106,7 +113,6 @@ class BindingVisitor(ast.NodeVisitor):
             for statement in node.body:
                 self.visit(statement)
         finally:
-            self.functions.pop()
             self.bindings, self.contracts = outer, contracts
         self.bindings[node.name] = Binding()
 

@@ -1,6 +1,6 @@
 # Agent workflow
 
-DO run `uvx pyunslop` and fix any warnings
+DO run `uvx --from . pyunslop` and fix any warnings
 
 ## Commit Message Structure
 
