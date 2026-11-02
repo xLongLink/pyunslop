@@ -1,5 +1,5 @@
 import ast
-from dataclasses import dataclass
+from dataclasses import field, dataclass
 from pyunslop.analysis import http
 from pyunslop.contracts import FunctionNode
 from pyunslop.diagnostics import Finding
@@ -12,8 +12,7 @@ class Endpoint:
 
     check_returns: bool
     response_models: set[str]
-    saw_return: bool = False
-    all_returns_raw: bool = True
+    return_kinds: set[str] = field(default_factory=set)
 
 
 class EndpointAnalyzer(BindingVisitor):
@@ -69,7 +68,7 @@ class EndpointAnalyzer(BindingVisitor):
             self.endpoints.pop()
 
         # Decorator options are resolved after restoring the enclosing import scope.
-        if self.annotation_kind(node.returns) != "@response" and not (endpoint.saw_return and endpoint.all_returns_raw):
+        if self.annotation_kind(node.returns) != "@response" and endpoint.return_kinds != {"@response"}:
             for route in routes:
                 if http.needs_response_model(route, self.qualified):
                     self.findings.append(Finding.at(route, "SLOP010", "declare response_model explicitly for this JSON endpoint"))
@@ -97,9 +96,8 @@ class EndpointAnalyzer(BindingVisitor):
         """Keep nested returns separate and review only recognized HTTP routes."""
         if self.endpoints:
             endpoint = self.endpoints[-1]
-            endpoint.saw_return = True
             return_kind = self.kind(node.value)
-            endpoint.all_returns_raw = endpoint.all_returns_raw and return_kind == "@response"
+            endpoint.return_kinds.add(return_kind)
 
             # Only route returns participate in response-policy checks.
             if endpoint.check_returns:

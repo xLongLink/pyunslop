@@ -1,6 +1,8 @@
 import ast
 from typing import TypeVar
+from contextlib import contextmanager
 from dataclasses import dataclass
+from collections.abc import Generator
 from pyunslop.contracts import LoopNode, WithNode, FunctionNode
 
 Value = TypeVar("Value")
@@ -85,30 +87,38 @@ class BindingVisitor(ast.NodeVisitor):
             identity = f"{node.module}.{alias.name}" if not node.level else ""
             self.bindings[alias.asname or alias.name] = Binding(identity=identity)
 
+    @contextmanager
+    def _scope(self) -> Generator[None, None, None]:
+        """Restore enclosing bindings and contracts when a nested scope exits."""
+        outer, contracts = self.bindings.copy(), self.contracts.copy()
+        try:
+            yield
+        finally:
+            self.bindings, self.contracts = outer, contracts
+
     def visit_FunctionDef(self, node: FunctionNode) -> None:
         """Isolate parameter bindings and restore the enclosing scope on exit."""
-        outer, contracts = self.bindings.copy(), self.contracts.copy()
-        self.contracts = {}
-        self.bindings[node.name] = Binding()
-        self.functions.append(node)
+        with self._scope():
+            self.contracts = {}
+            self.bindings[node.name] = Binding()
+            self.functions.append(node)
 
-        # Parameters shadow outer bindings, including unannotated names.
-        arguments = [*node.args.posonlyargs, *node.args.args, *node.args.kwonlyargs]
-        arguments += [arg for arg in (node.args.vararg, node.args.kwarg) if arg]
-        try:
-            for argument in arguments:
-                self.bindings[argument.arg] = Binding(value=self.annotation_kind(argument.annotation))
+            # Parameters shadow outer bindings, including unannotated names.
+            arguments = [*node.args.posonlyargs, *node.args.args, *node.args.kwonlyargs]
+            arguments += [arg for arg in (node.args.vararg, node.args.kwarg) if arg]
+            try:
+                for argument in arguments:
+                    self.bindings[argument.arg] = Binding(value=self.annotation_kind(argument.annotation))
 
-            # Explicit mutable contracts must survive domain value classification.
-            for argument in arguments:
-                self.contracts[argument.arg] = self.annotation(argument.annotation)
+                # Explicit mutable contracts must survive domain value classification.
+                for argument in arguments:
+                    self.contracts[argument.arg] = self.annotation(argument.annotation)
 
-            # Traverse the body only after all parameter contracts are established.
-            for statement in node.body:
-                self.visit(statement)
-        finally:
-            self.functions.pop()
-            self.bindings, self.contracts = outer, contracts
+                # Traverse the body only after all parameter contracts are established.
+                for statement in node.body:
+                    self.visit(statement)
+            finally:
+                self.functions.pop()
         self.bindings[node.name] = Binding()
 
     visit_AsyncFunctionDef = visit_FunctionDef
@@ -169,11 +179,8 @@ class BindingVisitor(ast.NodeVisitor):
 
     def visit_ClassDef(self, node: ast.ClassDef) -> None:
         """Prevent class-local bindings from leaking into adjacent definitions."""
-        outer, contracts = self.bindings.copy(), self.contracts.copy()
-        try:
+        with self._scope():
             self.generic_visit(node)
-        finally:
-            self.bindings, self.contracts = outer, contracts
         self.bindings[node.name] = Binding(identity=node.name)
 
     def visit_With(self, node: WithNode) -> None:

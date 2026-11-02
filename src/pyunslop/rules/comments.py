@@ -79,19 +79,22 @@ def counted_lines(source: Source) -> tuple[set[int], set[int]]:
 def control_weights(node: ast.AST, depth: int = 0) -> dict[int, int]:
     """Weight control-flow headers, resetting nesting at function boundaries."""
     weights: dict[int, int] = {}
-    if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef, ast.Lambda)):
-        depth = 0
 
-    # Case nodes carry their source location on the pattern.
-    elif type(node).__name__ in CONTROL_HEADERS:
-        line = node.pattern.lineno if isinstance(node, ast.match_case) else node.lineno
-        weights[line] = 2 + depth
-        depth += 1
+    def walk(current: ast.AST, nesting: int) -> None:
+        if isinstance(current, (ast.FunctionDef, ast.AsyncFunctionDef, ast.Lambda)):
+            nesting = 0
 
-    # Multiple headers on one physical line retain the largest weight.
-    for child in ast.iter_child_nodes(node):
-        for line, weight in control_weights(child, depth).items():
-            weights[line] = max(weights.get(line, 0), weight)
+        # Case nodes carry their source location on the pattern.
+        elif type(current).__name__ in CONTROL_HEADERS:
+            line = current.pattern.lineno if isinstance(current, ast.match_case) else current.lineno
+            weights[line] = max(weights.get(line, 0), 2 + nesting)
+            nesting += 1
+
+        # Siblings and nested headers share one line-to-weight map.
+        for child in ast.iter_child_nodes(current):
+            walk(child, nesting)
+
+    walk(node, depth)
     return weights
 
 

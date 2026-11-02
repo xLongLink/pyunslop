@@ -1,6 +1,9 @@
 import ast
+import pytest
 import textwrap
+from pytest_mock import MockerFixture
 from tests.support import query_codes, check_patterns
+from pyunslop.analysis.bindings import Binding, BindingVisitor
 
 
 def test_imports_are_resolved_at_their_use_sites() -> None:
@@ -35,6 +38,24 @@ def test_nested_scopes_restore_domain_bindings() -> None:
             return rows
         """)
     assert [(finding.line, finding.code) for finding in check_patterns(ast.parse(source), source)] == [(5, "SLOP006")]
+
+
+@pytest.mark.parametrize("definition", ["def inner(argument: int):", "async def inner(argument: int):", "class Inner:"])
+def test_failed_scope_restores_bindings_and_contracts(definition: str, mocker: MockerFixture) -> None:
+    """Restore both scope maps and traversal stacks after a body visit fails."""
+    visitor = BindingVisitor()
+    visitor.bindings = {"outer": Binding(identity="original")}
+    visitor.contracts = {"outer": "list"}
+    mocker.patch.object(visitor, "visit_Raise", side_effect=RuntimeError("inspection failed"), create=True)
+    tree = ast.parse(f"{definition}\n    import replacement as outer\n    outer: int = 1\n    raise Error\n")
+
+    # Fail only after the nested body has replaced both outer facts.
+    with pytest.raises(RuntimeError, match="inspection failed"):
+        visitor.visit(tree)
+    assert visitor.bindings == {"outer": Binding(identity="original")}
+    assert visitor.contracts == {"outer": "list"}
+    assert visitor.functions == []
+    assert visitor.parents == []
 
 
 def test_reassignments_and_parameter_shadowing_clear_provenance() -> None:

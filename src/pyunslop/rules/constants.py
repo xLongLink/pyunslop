@@ -23,25 +23,29 @@ SCOPE_BOUNDARIES = (
 )
 
 
-def mentions_binding(node: ast.AST, name: str) -> bool:
+def binding_names(node: ast.AST) -> set[str]:
     """Include bindings stored as strings rather than Name nodes."""
     if isinstance(node, ast.Name):
-        return node.id == name
+        return {node.id}
     if isinstance(node, ast.arg):
-        return node.arg == name
+        return {node.arg}
 
     # Definitions bind their names without an ast.Name store.
     if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)):
-        return node.name == name
+        return {node.name}
 
     # Imports, declarations, and captures may bind names without a Name node.
     if isinstance(node, ast.alias):
-        return (node.asname or node.name.split(".")[0]) == name
+        return {node.asname or node.name.split(".")[0]}
     if isinstance(node, (ast.Global, ast.Nonlocal)):
-        return name in node.names
+        return set(node.names)
+
+    # Anonymous patterns and exception handlers do not bind a name.
     if isinstance(node, (ast.ExceptHandler, ast.MatchAs, ast.MatchStar)):
-        return node.name == name
-    return isinstance(node, ast.MatchMapping) and node.rest == name
+        return {node.name} if node.name is not None else set()
+    if isinstance(node, ast.MatchMapping) and node.rest is not None:
+        return {node.rest}
+    return set()
 
 
 def constant_target(statement: ast.stmt, private_only: bool) -> ast.Name | None:
@@ -79,6 +83,12 @@ def single_use_constants(scope: ScopeNode) -> list[Finding]:
         else:
             pending.extend(ast.iter_child_nodes(node))
 
+    # Index each node once, including declarations that repeat a name.
+    references_by_name: dict[str, list[ast.AST]] = {}
+    for node in nodes:
+        for name in binding_names(node):
+            references_by_name.setdefault(name, []).append(node)
+
     # Check assignments against both complete references and nested-scope mentions.
     findings: list[Finding] = []
     for statement in scope.body:
@@ -87,7 +97,7 @@ def single_use_constants(scope: ScopeNode) -> list[Finding]:
             continue
 
         # Only one store followed by one same-scope load is eligible.
-        references = [node for node in nodes if mentions_binding(node, target.id)]
+        references = references_by_name[target.id]
         if len(references) != 2 or any(reference in nested for reference in references):
             continue
         uses = [node for node in references if isinstance(node, ast.Name) and isinstance(node.ctx, ast.Load)]
