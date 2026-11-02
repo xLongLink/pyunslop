@@ -30,16 +30,23 @@ def temporary_iterable_pair(function: FunctionNode, assignment: ast.stmt, follow
     if not isinstance(target, ast.Name) or not simple_comprehension(assignment.value):
         return []
 
-    # Closure reads count as reuse, not just references in this statement block.
-    uses = name_loads(function, target.id)
-    if len(uses) != 1:
-        return []
-    node, consumer = uses[0]
-
     # A larger expression could perform work before reaching the consumer.
-    if not isinstance(consumer, ast.Call) or getattr(following, "value", None) is not consumer:
+    consumer = getattr(following, "value", None)
+    if (
+        not isinstance(consumer, ast.Call)
+        or qualified(consumer.func) not in ITERABLE_CONSUMERS
+        or len(consumer.args) != 1
+        or consumer.keywords
+    ):
         return []
-    if qualified(consumer.func) in ITERABLE_CONSUMERS and consumer.args == [node] and not consumer.keywords:
+
+    # The sole argument must read this temporary directly, without unpacking.
+    argument = consumer.args[0]
+    if not isinstance(argument, ast.Name) or argument.id != target.id:
+        return []
+
+    # Closure reads count as reuse, not just references in this statement block.
+    if len(name_loads(function, target.id)) == 1:
         return [Finding.at(assignment.value, CODE, "review a generator for this single-use list; preserve snapshot and exception timing")]
     return []
 

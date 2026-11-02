@@ -50,6 +50,8 @@ REBOUND_CONSTANTS = (
     "VALUE = 30\nmatch item:\n    case {**VALUE}:\n        pass\nreturn VALUE",
     "global VALUE\nVALUE = 30\nreturn VALUE",
     "nonlocal VALUE\nVALUE = 30\nreturn VALUE",
+    "global VALUE, VALUE\nVALUE = 30\nreturn VALUE",
+    "nonlocal VALUE, VALUE\nVALUE = 30\nreturn VALUE",
     "VALUE = 30\nreturn (VALUE := 40)",
 )
 
@@ -107,6 +109,13 @@ def test_independent_scopes() -> None:
         return VALUE
     """
     assert codes(source) == ["SLOP023", "SLOP023"]
+
+
+def test_multiple_constants_keep_assignment_order() -> None:
+    """Report independent single-use constants in their assignment order."""
+    source = "def run():\n    FIRST = 1\n    SECOND = 2\n    REUSED = 3\n    return SECOND, FIRST, REUSED, REUSED\n"
+    findings = check_patterns(ast.parse(source))
+    assert [(finding.line, finding.code) for finding in findings] == [(2, "SLOP023"), (3, "SLOP023")]
 
 
 @pytest.mark.parametrize("source", EXPORTED_CONSTANTS)

@@ -87,6 +87,7 @@ def test_nesting_weights_only_control_headers(check_source: Callable[[str], list
         ("for a in items:\n    while ready:\n        if enabled:\n            work()\n", {1: 2, 2: 3, 3: 4}),
         ("if first:\n    pass\nelif second:\n    pass\n", {1: 2, 3: 3}),
         ("if ready: work()\n", {1: 2}),
+        ("if outer:\n    def inner():\n        if ready:\n            pass\n    if other:\n        pass\n", {1: 2, 3: 2, 5: 3}),
     ],
 )
 def test_control_header_weights(source: str, expected: dict[int, int]) -> None:

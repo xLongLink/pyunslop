@@ -35,6 +35,22 @@ def test_adjacent_single_use_temporary(consumer: str) -> None:
     assert codes(source) == ["SLOP017"]
 
 
+@pytest.mark.parametrize("following", ["sum(amounts)", "result = sum(amounts)", "result: int = sum(amounts)"])
+def test_adjacent_consumer_statement_forms(following: str) -> None:
+    """Recognize direct consumers in expressions and both assignment forms."""
+    source = f"def total(invoices):\n    amounts = [invoice.amount for invoice in invoices]\n    {following}\n"
+    assert codes(source) == ["SLOP017"]
+
+
+@pytest.mark.parametrize(
+    "following", ["return sum(other)", "return sum(amounts, 0)", "return sum(amounts, start=0)", "return sum(*amounts)"]
+)
+def test_adjacent_consumer_requires_one_direct_matching_argument(following: str) -> None:
+    """Keep unrelated, unpacked, and argument-bearing consumers outside the rule."""
+    source = f"def total(invoices):\n    amounts = [invoice.amount for invoice in invoices]\n    {following}\n"
+    assert codes(source) == []
+
+
 # Adjacency applies to compound statement lists as well as function bodies.
 @pytest.mark.parametrize(
     "block",
