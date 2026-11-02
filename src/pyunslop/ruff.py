@@ -18,7 +18,19 @@ def run_ruff(command: str, *arguments: str) -> str:
     except subprocess.TimeoutExpired as exc:
         raise RuntimeError(f"Ruff timed out after {TIMEOUT_SECONDS} seconds") from exc
 
-    # Exit code one denotes findings; other failures stop the scan.
+    # Ruff's formatter exits two for syntax errors as well as execution failures.
+    if result.returncode == 2 and command == "format" and "--check" in arguments and not result.stderr:
+        try:
+            items = json.loads(result.stdout)
+
+            # Accept status two only after validating every returned diagnostic.
+            diagnostics = [parse_diagnostic(item) for item in items] if isinstance(items, list) else []
+        except (ValueError, KeyError, TypeError):
+            diagnostics = []
+        if any(item.code == "invalid-syntax" for item in diagnostics):
+            return result.stdout
+
+    # Exit code one denotes ordinary findings; other failures stop the scan.
     if result.returncode not in (0, 1):
         raise RuntimeError(f"Ruff failed: {result.stderr.strip() or result.stdout.strip()}")
     return result.stdout
@@ -28,6 +40,10 @@ def parse_diagnostic(item: object) -> Diagnostic:
     """Validate the Ruff fields used by sorting and rendering."""
     if not isinstance(item, dict):
         raise ValueError("expected a diagnostic object")
+
+    # Ruff's lint syntax errors have a diagnostic name but no rule code.
+    if item.get("code") is None and item.get("name") == "invalid-syntax":
+        item = {**item, "code": "invalid-syntax"}
     if any(not isinstance(item.get(key), str) or not item[key] for key in ("filename", "code", "message")):
         raise ValueError("expected nonempty diagnostic strings")
 
@@ -55,4 +71,4 @@ def check_ruff() -> list[Diagnostic]:
         # Keep parser and schema errors on the CLI's operational-error path.
         except (ValueError, KeyError, TypeError) as exc:
             raise RuntimeError("Ruff returned invalid diagnostics") from exc
-    return findings
+    return list(dict.fromkeys(findings))

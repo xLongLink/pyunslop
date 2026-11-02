@@ -1,22 +1,14 @@
-import ast
-import textwrap
-from pyunslop.source import Source
-from pyunslop.analysis import check_patterns as analyze
-from pyunslop.diagnostics import Finding
+import re
+from subprocess import CompletedProcess
+from collections.abc import Callable
 
-QUERY_IMPORTS = "from sqlalchemy.ext.asyncio import AsyncSession\nfrom collections.abc import Sequence\n"
+RunCLI = Callable[..., CompletedProcess[str]]
 
 
-def check_patterns(tree: ast.Module, source: str = "") -> list[Finding]:
-    """Run AST-focused fixtures without requiring their original source text."""
-    return analyze(Source(source, tree))
-
-
-def codes(source: str) -> list[str]:
-    """Return native warning codes for a dedented source fixture."""
-    return [finding.code for finding in check_patterns(ast.parse(textwrap.dedent(source)))]
-
-
-def query_codes(source: str) -> list[str]:
-    """Resolve query fixtures with shared SQLAlchemy and Sequence imports."""
-    return codes(QUERY_IMPORTS + textwrap.dedent(source))
+def native_codes(result: CompletedProcess[str]) -> list[str]:
+    """Read native rule codes without mistaking Ruff or execution failures for acceptance."""
+    assert result.stderr == "", result.stderr
+    assert result.returncode in (0, 1), result.stdout
+    assert "invalid-syntax" not in result.stdout, result.stdout
+    assert result.returncode == (0 if result.stdout == "All checks passed!\n" else 1), result.stdout
+    return re.findall(r"^.+:\d+:\d+: (SLOP\d{3}) ", result.stdout, re.MULTILINE)

@@ -8,7 +8,7 @@ from pyunslop.analysis.bindings import BindingVisitor
 
 if TYPE_CHECKING:
     from pyunslop.source import Source
-    from pyunslop.contracts import QualifiedName
+    from pyunslop.contracts import FunctionNode, QualifiedName
 
 CODE = "SLOP012"
 CLI_HELP_APIS = {"argparse.ArgumentParser", "click.command", "click.group", "typer.Typer"}
@@ -41,6 +41,14 @@ class ModuleDocAnalyzer(BindingVisitor):
         """Record help uses while import aliases are in scope."""
         self.cli_doc_used |= uses_cli_doc(node, self.qualified)
         self.generic_visit(node)
+
+    def visit_FunctionDef(self, node: FunctionNode) -> None:
+        """Inspect CLI decorators before entering the function's parameter scope."""
+        for decorator in node.decorator_list:
+            self.visit(decorator)
+        super().visit_FunctionDef(node)
+
+    visit_AsyncFunctionDef = visit_FunctionDef
 
 
 def check_module_doc(source: Source) -> list[Finding]:
