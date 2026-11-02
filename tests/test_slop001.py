@@ -1,5 +1,8 @@
+import ast
 import pytest
 from tests.support import RunCLI, native_codes
+from pyunslop.source import Source
+from pyunslop.rules.comments import counted_lines
 
 CANDIDATES = (
     pytest.param("total = 0\n" + "total += 1\n" * 12, 11, id="first-budget-crossing-only"),
@@ -48,3 +51,23 @@ def test_preserves_budget_resets_and_collapsed_data(run_cli: RunCLI, source: str
 
     # Assert
     assert native_codes(result) == []
+
+
+@pytest.mark.parametrize(
+    ("source", "lines"),
+    [
+        pytest.param("values = [\n    [1, (-2, None)],\n]; run()\n", {1, 3}, id="closing-line-suffix"),
+        pytest.param("é = 0; values = [\n    [1, (-2, None)],\n]; run()\n", {1, 3}, id="unicode-prefix"),
+        pytest.param('values = "first" \\\n    "second", (\n    "third"\n    "fourth",\n)\n', {1}, id="adjacent-strings-in-tuple"),
+        pytest.param("values = [\n    load(),\n    [1, 2],\n]\n", {1, 2, 3, 4}, id="computed-container"),
+    ],
+)
+def test_literal_exclusions_preserve_executable_lines(source: str, lines: set[int]) -> None:
+    """Collapse nested data without hiding executable suffixes or computed items."""
+    facts = Source(source, ast.parse(source))
+
+    # Act
+    _, counted = counted_lines(facts)
+
+    # Assert
+    assert counted == lines

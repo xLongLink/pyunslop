@@ -21,7 +21,7 @@ classifiers = [
 pyunslop = "pyunslop.__main__:main"
 
 [project.optional-dependencies]
-test = ["pytest>=8", "pytest-mock>=3.14"]
+test = ["pytest>=8"]
 
 [tool.setuptools.packages.find]
 where = ["src"]

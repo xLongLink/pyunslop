@@ -123,7 +123,6 @@ class QueryAnalyzer(BindingVisitor):
         # One-element unpacking is eligible; multi-column row contracts stay intact.
         for target in node.targets:
             if isinstance(target, (ast.Tuple, ast.List)) and len(target.elts) == 1 and single_row:
-
                 # Keep the one/first consumer's cardinality requirement in the warning.
                 self.findings.append(
                     Finding.at(
@@ -138,7 +137,6 @@ class QueryAnalyzer(BindingVisitor):
         """Require SQL ownership without crossing an unrelated enclosing call."""
         for parent in reversed(self.parents[:-1]):
             if isinstance(parent, ast.Call):
-
                 # Known expression constructors establish SQL ownership directly.
                 if self.qualified(parent.func) in query_types.EXPRESSION_FUNCTIONS:
                     return True
@@ -217,7 +215,6 @@ class QueryAnalyzer(BindingVisitor):
         """Review adjacent same-session commit/refresh calls without rewriting."""
         refresh = called_method(node)
         if refresh and refresh.attr == "refresh" and self.kind(refresh.value) == "@session":
-
             # Only an immediately preceding same-session commit establishes this candidate.
             for statements, index in statement_positions(self.parents[-2], node):
                 commit = called_method(statements[index - 1]) if index else None

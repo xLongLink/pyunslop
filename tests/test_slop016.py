@@ -42,3 +42,33 @@ def test_preserves_independent_bindings_and_explicit_loops(run_cli: RunCLI, sour
 
     # Assert
     assert native_codes(result) == []
+
+
+@pytest.mark.parametrize(
+    ("source", "count"),
+    [
+        pytest.param(
+            "rows = [[Row(value=(value := item), doubled=value * 2) for item in group] for group in groups]\n", 1, id="nested-output"
+        ),
+        # Different constructors can expose the same binding.
+        pytest.param(
+            "rows = [Outer([Inner(value=(value := item), doubled=value * 2) for item in group], later=value) for group in groups]\n",
+            1,
+            id="overlapping-constructor-dependencies",
+        ),
+        # Nested filters remain part of the enclosing output expression.
+        pytest.param(
+            "rows = [[Row(value=(value := item), later=value) for item in Rows(group) if Check(flag=(flag := item), later=flag)] for group in groups]\n",
+            2,
+            id="nested-iterable-and-filter",
+        ),
+    ],
+)
+def test_nested_comprehensions_report_each_binding_once(run_cli: RunCLI, source: str, count: int) -> None:
+    """Preserve nested calls and deduplicate bindings shared by constructor scans."""
+
+    # Act
+    result = run_cli(source)
+
+    # Assert
+    assert native_codes(result) == ["SLOP016"] * count

@@ -56,6 +56,13 @@ def constant_target(statement: ast.stmt, private_only: bool) -> ast.Name | None:
 
 def single_use_constants(scope: ScopeNode) -> list[Finding]:
     """Find conservative, same-scope literal-inlining review candidates."""
+    candidates = [
+        (statement, target) for statement in scope.body if (target := constant_target(statement, isinstance(scope, ast.Module))) is not None
+    ]
+    if not candidates:
+        return []
+
+    # Namespace introspection can observe reads absent from the syntax tree.
     nodes = list(ast.walk(scope))
     if any(
         isinstance(node, ast.Call) and isinstance(node.func, ast.Name) and node.func.id in {"globals", "locals", "vars", "eval", "exec"}
@@ -81,11 +88,7 @@ def single_use_constants(scope: ScopeNode) -> list[Finding]:
 
     # Check assignments against both complete references and nested-scope mentions.
     findings: list[Finding] = []
-    for statement in scope.body:
-        target = constant_target(statement, isinstance(scope, ast.Module))
-        if target is None:
-            continue
-
+    for statement, target in candidates:
         # Only one store followed by one same-scope load is eligible.
         references = [node for node in nodes if mentions_binding(node, target.id)]
         if len(references) != 2 or any(reference in nested for reference in references):

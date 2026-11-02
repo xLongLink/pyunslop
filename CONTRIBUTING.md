@@ -13,12 +13,11 @@ uvx --from . pyunslop
 ```text
 pyunslop/
     __main__.py             # Unified lint output and exit codes
-    checker.py              # Public check_file orchestration
+    checker.py              # Public check_file and native-check pipeline
     discovery.py            # File discovery, exclusions, deduplication
     diagnostics.py          # Native Finding and public Warning records
     source.py               # Encoding-aware input, AST, shared tokens
     analysis/
-        __init__.py         # Explicit AST-check pipeline
         bindings.py         # Position-sensitive Python name/scope handling
         queries.py          # SQLAlchemy/SQLModel checks and per-file state
         query_types.py      # Known database APIs and value classification

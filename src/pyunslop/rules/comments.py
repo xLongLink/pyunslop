@@ -36,7 +36,9 @@ def counted_lines(source: Source) -> tuple[set[int], set[int]]:
     literal_spans = []
 
     # Collect source exclusions separately from token-level counting.
-    for node in ast.walk(source.tree):
+    pending: list[ast.AST] = [source.tree]
+    while pending:
+        node = pending.pop()
         if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
             function_starts.add(node.lineno)
 
@@ -56,6 +58,8 @@ def counted_lines(source: Source) -> tuple[set[int], set[int]]:
         # Keep the opening token, but exclude the rest of each literal's span.
         elif is_literal_container(node):
             literal_spans.append(((node.lineno, node.col_offset), (node.end_lineno, node.end_col_offset)))
+            continue
+        pending.extend(ast.iter_child_nodes(node))
 
     # AST columns are UTF-8 byte offsets; tokenize columns count characters.
     def inside_literal(token: tokenize.TokenInfo) -> bool:
@@ -153,7 +157,6 @@ def check_separation(source: Source) -> list[Finding]:
             and line_number - 1 not in headers
             and line_number not in continued
         ):
-
             # Report only the block's opening comment.
             findings.append(Finding(line_number, 1, "SLOP002", "expected a blank line before the comment block"))
     return findings
@@ -165,7 +168,6 @@ def check_suppressions(source: Source) -> list[Finding]:
     for token in source.comments:
         match = NOQA_DIRECTIVE.search(token.string)
         if match:
-
             # Match offsets are relative to the token, not the physical source line.
             line, column = token.start
             findings.append(Finding(line, column + match.start() + 1, "SLOP003", "noqa suppression directives are forbidden"))

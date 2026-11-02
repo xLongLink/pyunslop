@@ -1,5 +1,7 @@
+import ast
 import pytest
 from tests.support import RunCLI, native_codes
+from pyunslop.rules.constants import single_use_constants
 
 
 @pytest.mark.parametrize("literal", ['"Ready"', "30", "-30", '(1, "ready", (-2, None))'])
@@ -59,3 +61,21 @@ def test_preserves_contracts_mutability_and_scope_boundaries(run_cli: RunCLI, so
 
     # Assert
     assert native_codes(result) == []
+
+
+@pytest.mark.parametrize("source", ["pass\n", "TIMEOUT = 30\nconnect(TIMEOUT)\n", "def render():\n    return 30\n"])
+def test_candidate_free_scopes_skip_reference_analysis(monkeypatch: pytest.MonkeyPatch, source: str) -> None:
+    """Avoid traversing scopes that cannot produce a constant finding."""
+    tree = ast.parse(source)
+    scope = tree.body[0] if isinstance(tree.body[0], ast.FunctionDef) else tree
+
+    def unexpected_walk(_node: ast.AST) -> None:
+        pytest.fail("candidate-free scopes must not walk references")
+
+    # Act
+    with monkeypatch.context() as patch:
+        patch.setattr(ast, "walk", unexpected_walk)
+        findings = single_use_constants(scope)
+
+    # Assert
+    assert findings == []

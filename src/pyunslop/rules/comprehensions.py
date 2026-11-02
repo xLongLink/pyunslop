@@ -27,7 +27,7 @@ def argument_dependencies(arguments: Sequence[ast.expr]) -> list[ast.NamedExpr]:
     return [binding for group in reversed(groups) for binding in group]
 
 
-def comprehension_dependencies(node: ComprehensionNode) -> list[ast.NamedExpr]:
+def comprehension_dependencies(node: ComprehensionNode, checked_calls: set[ast.Call]) -> list[ast.NamedExpr]:
     """Inspect constructor calls inside comprehension output expressions."""
     roots = [node.key, node.value] if isinstance(node, ast.DictComp) else [node.elt]
     findings = []
@@ -38,8 +38,9 @@ def comprehension_dependencies(node: ComprehensionNode) -> list[ast.NamedExpr]:
             name = call.func.id if isinstance(call.func, ast.Name) else getattr(call.func, "attr", "")
 
             # Leading underscores do not change constructor recognition.
-            if not name.lstrip("_")[:1].isupper():
+            if not name.lstrip("_")[:1].isupper() or call in checked_calls:
                 continue
+            checked_calls.add(call)
 
             # Positional and keyword values are evaluated in this order.
             arguments = [*call.args, *(keyword.value for keyword in call.keywords)]
@@ -50,13 +51,16 @@ def comprehension_dependencies(node: ComprehensionNode) -> list[ast.NamedExpr]:
 def check_comprehensions(source: Source) -> list[Finding]:
     """Report each dependent binding once, including nested comprehensions."""
     reported: set[ast.NamedExpr] = set()
+    checked_calls: set[ast.Call] = set()
     findings = []
+
+    # Keep nested iterable and filter calls reachable through enclosing output expressions.
     for node in ast.walk(source.tree):
         if not isinstance(node, (ast.ListComp, ast.SetComp, ast.DictComp, ast.GeneratorExp)):
             continue
 
         # The same nested binding can be reached from multiple comprehension roots.
-        for binding in comprehension_dependencies(node):
+        for binding in comprehension_dependencies(node, checked_calls):
             if binding not in reported:
                 reported.add(binding)
 
