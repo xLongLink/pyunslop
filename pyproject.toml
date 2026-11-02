@@ -5,11 +5,11 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "pyunslop"
 version = "0.0.0"
-description = "Warning-only Python code checks for humans and coding agents"
+description = "Python lint checks for humans and coding agents"
 readme = "README.md"
 license = { file = "LICENSE" }
 requires-python = ">=3.10"
-dependencies = []
+dependencies = ["ruff>=0.17.3,<1"]
 keywords = ["lint", "comments", "agents", "python"]
 classifiers = [
     "Development Status :: 3 - Alpha",
@@ -27,27 +27,4 @@ test = ["pytest>=8", "pytest-mock>=3.14"]
 where = ["src"]
 
 [tool.setuptools.package-data]
-pyunslop = ["py.typed"]
-
-[tool.ruff]
-line-length = 140
-target-version = "py310"
-
-[tool.ruff.format]
-skip-magic-trailing-comma = true
-
-[tool.ruff.lint]
-preview = true
-select = ["F", "UP", "D", "DTZ", "I", "ICN", "PIE", "RET", "ARG", "N", "PERF", "PTH", "A", "S", "ASYNC", "ANN", "B006", "E262", "E265", "E302", "E305", "C403", "C419", "PGH003", "PT", "RUF100"]
-ignore = ["D100", "D104", "D202"]
-
-[tool.ruff.lint.per-file-ignores]
-"tests/**" = ["ARG", "N803", "S"]
-
-[tool.ruff.lint.isort]
-no-sections = true
-length-sort = true
-split-on-trailing-comma = false
-
-[tool.ruff.lint.pep8-naming]
-extend-ignore-names = ["visit_*"]
+pyunslop = ["py.typed", "ruff.toml"]

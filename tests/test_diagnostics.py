@@ -27,4 +27,4 @@ def test_warning_format_contains_path_location_code_and_message() -> None:
     rendered = str(warning)
 
     # Assert
-    assert rendered == "nested/example.py:2:5: warning: SLOP004 Explain the issue"
+    assert rendered == "nested/example.py:2:5: SLOP004 Explain the issue"

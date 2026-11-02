@@ -12,7 +12,7 @@ uvx --from . pyunslop
 
 ```text
 pyunslop/
-    __main__.py             # CLI output and warning-only exit policy
+    __main__.py             # Unified lint output and exit codes
     checker.py              # Public check_file orchestration
     discovery.py            # File discovery, exclusions, deduplication
     diagnostics.py          # Native Finding and public Warning records

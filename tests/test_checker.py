@@ -20,9 +20,26 @@ def test_invalid_source_is_skipped(check_source: Callable[[str], list[CheckWarni
     assert check_source("def broken(\n") == []
 
 
-def test_missing_file_is_skipped(tmp_path: Path) -> None:
-    """Skip an individual file that disappears before inspection."""
-    assert check_file(tmp_path / "missing.py") == []
+def test_missing_file_raises(tmp_path: Path) -> None:
+    """Do not claim a clean result for a file that disappears before inspection."""
+    with pytest.raises(FileNotFoundError):
+        check_file(tmp_path / "missing.py")
+
+
+def test_permission_failure_raises(source_file: Path, mocker: MockerFixture) -> None:
+    """Preserve file-read failures for callers and the CLI to report."""
+    mocker.patch("pyunslop.checker.Source.read", side_effect=PermissionError("cannot read"))
+    with pytest.raises(PermissionError, match="cannot read"):
+        check_file(source_file)
+
+
+@pytest.mark.parametrize("prefix", ["é", "变量", "é变量"])
+def test_unicode_columns_match_character_positions(source_file: Path, prefix: str) -> None:
+    """Convert AST byte offsets without changing token-based comment columns."""
+    source = f"{prefix} = 1; values = tuple([x for x in items])  # café # noqa\n"
+    source_file.write_text(source)
+    findings = check_file(source_file)
+    assert [(item.code, item.column) for item in findings] == [("SLOP017", source.index("[x") + 1), ("SLOP003", source.index("# noqa") + 1)]
 
 
 def test_invalid_encoding_is_skipped(tmp_path: Path) -> None:

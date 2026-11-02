@@ -1,10 +1,10 @@
 from pyunslop.source import Source
-from pyunslop.analysis.queries import analyze_queries
-from pyunslop.analysis.endpoints import analyze_endpoints
 from pyunslop.diagnostics import Finding
 from pyunslop.rules.pytest import check_pytest
 from pyunslop.rules.pydantic import check_pydantic
+from pyunslop.analysis.queries import analyze_queries
 from pyunslop.rules.module_doc import check_module_doc
+from pyunslop.analysis.endpoints import analyze_endpoints
 from pyunslop.rules.simplifications import check_simplifications
 
 

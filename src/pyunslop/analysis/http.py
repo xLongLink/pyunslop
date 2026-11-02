@@ -70,7 +70,6 @@ def is_external(route: ast.Call) -> bool:
     values = {keyword.arg: keyword.value for keyword in route.keywords}
     extra = values.get("openapi_extra")
     if isinstance(extra, ast.Dict):
-
         # Only a literal true value opts the route into an external protocol.
         return any(
             isinstance(key, ast.Constant) and key.value == "x-external-protocol" and isinstance(value, ast.Constant) and value.value is True

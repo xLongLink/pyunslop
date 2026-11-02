@@ -113,7 +113,7 @@ def test_comment_resets_points_but_not_control_depth(check_source: Callable[[str
     """Retain nesting after an explanation resets the accumulated budget."""
     source = "for item in items:\n    # Explain this branch.\n    if ready:\n" + "        work()\n" * 8
     warnings = check_source(source)
-    assert [(w.code, w.line) for w in warnings] == [("SLOP002", 2), ("SLOP001", 11)]
+    assert [(w.code, w.line) for w in warnings] == [("SLOP001", 11)]
 
 
 def test_imports_and_blank_lines_do_not_count(check_source: Callable[[str], list[CheckWarning]]) -> None:
@@ -176,17 +176,38 @@ def test_comment_block_requires_one_blank_line(check_source: Callable[[str], lis
     assert [(w.code, w.line) for w in warnings] == [("SLOP002", 2)]
 
 
-def test_suite_comments_require_separation_but_continuations_are_exempt(check_source: Callable[[str], list[CheckWarning]]) -> None:
-    """Require suite separation without flagging bracketed expression comments."""
+def test_suite_and_continuation_comments_are_exempt(check_source: Callable[[str], list[CheckWarning]]) -> None:
+    """Match Ruff for opening suite comments and bracketed expression comments."""
     source = "if True:\n    # Explain this branch.\n    values = [\n        # Explain this value.\n        1,\n    ]\n"
-    assert [(warning.code, warning.line) for warning in check_source(source)] == [("SLOP002", 2)]
+    assert check_source(source) == []
 
 
-def test_loop_comment_requires_separation(check_source: Callable[[str], list[CheckWarning]]) -> None:
-    """Require a blank line before a loop's opening comment."""
+def test_loop_comment_does_not_require_separation(check_source: Callable[[str], list[CheckWarning]]) -> None:
+    """Allow comments immediately after loop headers with or without blank lines."""
     source = "for path in paths:\n    # Explicit files bypass exclusions.\n    if path.is_file():\n        candidates = [path]\n"
-    assert [(warning.code, warning.line) for warning in check_source(source)] == [("SLOP002", 2)]
+    assert check_source(source) == []
     assert check_source(source.replace("paths:\n", "paths:\n\n")) == []
+
+
+@pytest.mark.parametrize(
+    "source",
+    [
+        "if ready:  # Header comment\n    # Explain branch.\n    pass\n",
+        "def run(\n    value: int,\n):\n    # Explain body.\n    pass\n",
+        "try:\n    pass\nexcept Error:\n    # Explain recovery.\n    pass\n",
+        "if ready:\n    pass\nelse:\n    # Explain fallback.\n    pass\n",
+        "match value:\n    case 1:\n        # Explain case.\n        pass\n",
+    ],
+)
+def test_suite_header_comment_variants(check_source: Callable[[str], list[CheckWarning]], source: str) -> None:
+    """Recognize logical suite headers rather than matching raw colon characters."""
+    assert not [item for item in check_source(source) if item.code == "SLOP002"]
+
+
+def test_colon_in_string_does_not_exempt_comment(check_source: Callable[[str], list[CheckWarning]]) -> None:
+    """Keep requiring separation after ordinary statements that contain colons."""
+    findings = check_source('value = ":"\n# Explain next step.\nwork()\n')
+    assert [(item.code, item.line) for item in findings] == [("SLOP002", 2)]
 
 
 def test_first_line_and_separated_comments_are_allowed(check_source: Callable[[str], list[CheckWarning]]) -> None:

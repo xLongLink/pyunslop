@@ -30,7 +30,7 @@ DO run `uvx pyunslop` and fix any warnings
 
 ## Rules
 
-| Code | Warning |
+| Code | Finding |
 | --- | --- |
 | [SLOP001](docs/SLOP001.md) | More than 10 complexity points without a standalone comment. |
 | [SLOP002](docs/SLOP002.md) | Missing blank line before a standalone comment block. |
@@ -58,41 +58,17 @@ DO run `uvx pyunslop` and fix any warnings
 
 <br />
 
-## Suggested Ruff configurations
+Ruff is installed with pyunslop. Every run also checks lint and formatting with
+the bundled preset, without modifying files. SLOP and Ruff findings share one
+sorted report and summary. Exit codes are `0` for a clean project, `1` for lint or
+format findings, and `2` for operational failures. No Ruff configuration is needed,
+and project Ruff settings do not override the bundled preset.
 
-The rules complement an exising ruff configuration, this is our suggestion:
-
-Install Ruff separately and add these settings to your `pyproject.toml`.
-Run `ruff check` and `ruff format --check` separately; pyunslop does not run Ruff.
-
-```toml
-[tool.ruff]
-line-length = 140
-
-[tool.ruff.format]
-skip-magic-trailing-comma = true
-
-[tool.ruff.lint]
-preview = true
-select = [
-    "F", "UP", "D", "DTZ", "I", "ICN", "PIE", "RET", "ARG", "N",
-    "PERF", "PTH", "A", "S", "ASYNC", "ANN", "B006", "E302", "E305",
-    "E262", "E265", "C403", "C419",
-    "PGH003", "PT", "RUF100", "TID252",
-]
-ignore = ["D100", "D104", "D202"]
-
-[tool.ruff.lint.flake8-tidy-imports]
-ban-relative-imports = "all"
-
-[tool.ruff.lint.per-file-ignores]
-"tests/**" = ["ARG", "N803", "S"]
-
-[tool.ruff.lint.isort]
-no-sections = true
-length-sort = true
-split-on-trailing-comma = false
-```
+Native Python checks use Ruff's file discovery, including Git ignore rules.
+Unreadable files are operational errors rather than clean results. Each Ruff
+invocation, including discovery, has a 120-second timeout.
+Newline-containing paths are unsupported and cause an operational error if
+encountered during discovery.
 
 <br />
 

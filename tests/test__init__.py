@@ -15,7 +15,7 @@ def test_public_api_exports_are_available() -> None:
     """Consumers can import the documented API directly from the package."""
 
     # Arrange
-    expected = {"Warning", "check_file", "find_python_files"}
+    expected = {"Diagnostic", "Warning", "check_file", "find_python_files"}
 
     # Act
     exported = set(pyunslop.__all__)
@@ -23,6 +23,7 @@ def test_public_api_exports_are_available() -> None:
     # Assert
     assert exported == expected
     assert pyunslop.Warning is CheckWarning
+    assert pyunslop.Diagnostic is CheckWarning
     assert pyunslop.check_file is check_file
     assert pyunslop.find_python_files is find_python_files
 

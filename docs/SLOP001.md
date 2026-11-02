@@ -1,6 +1,6 @@
 # SLOP001: Uncommented complexity budget
 
-Warn when an uncommented run exceeds a fixed budget of 10 points:
+Report when an uncommented run exceeds a fixed budget of 10 points:
 
 - Ordinary non-import code lines cost 1 point.
 - Function signatures count once, regardless of how many lines their parameters
@@ -23,7 +23,7 @@ values are not literal-only containers.
 
 Report only the first line crossing the budget until the next reset. This is a
 readability heuristic, not cyclomatic complexity. Prefer simpler code or a useful
-explanation, not filler comments. Findings remain warning-only.
+explanation, not filler comments. Findings cause the CLI to exit with status `1`.
 
 ```py
 # Bad

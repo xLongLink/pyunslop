@@ -140,12 +140,19 @@ def check_separation(source: Source) -> list[Finding]:
     """Require separation before comment blocks outside continuations."""
     findings = []
     continued = continued_comments(source)
+    tokens = [token for token in source.tokens if token.type not in {tokenize.COMMENT, tokenize.NL}]
+    headers = {previous.end[0] for previous, token in zip(tokens, tokens[1:]) if previous.string == ":" and token.type == tokenize.NEWLINE}
     for line_number in sorted(source.standalone_comments):
         previous = source.lines[line_number - 2] if line_number > 1 else ""
 
         # Only the first comment in an ordinary block needs a preceding blank line.
-        if line_number > 1 and previous.strip() and line_number - 1 not in source.standalone_comments and line_number not in continued:
-
+        if (
+            line_number > 1
+            and previous.strip()
+            and line_number - 1 not in source.standalone_comments
+            and line_number - 1 not in headers
+            and line_number not in continued
+        ):
             # Report only the block's opening comment.
             findings.append(Finding(line_number, 1, "SLOP002", "expected a blank line before the comment block"))
     return findings
@@ -157,7 +164,6 @@ def check_suppressions(source: Source) -> list[Finding]:
     for token in source.comments:
         match = NOQA_DIRECTIVE.search(token.string)
         if match:
-
             # Match offsets are relative to the token, not the physical source line.
             line, column = token.start
             findings.append(Finding(line, column + match.start() + 1, "SLOP003", "noqa suppression directives are forbidden"))
