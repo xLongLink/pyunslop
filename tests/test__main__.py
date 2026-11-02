@@ -143,11 +143,12 @@ def test_absolute_paths_are_not_supported(source_file: Path, run_cli: Callable[.
 
 
 def test_additional_rules_are_warning_only(source_file: Path, run_cli: Callable[..., tuple[int, str, str]]) -> None:
-    """Combine query, domain-instance, and API warnings in one scan."""
+    """Combine query, constructor-instance, and API warnings in one scan."""
     source_file.write_text(
         "from fastapi import FastAPI\n"
         "from sqlmodel import col\n"
         "from sqlalchemy.ext.asyncio import AsyncSession\n"
+        "class Client: pass\n"
         "app = FastAPI()\n"
         "@app.get('/users')\n"
         "async def users(s: AsyncSession):\n"
@@ -155,7 +156,7 @@ def test_additional_rules_are_warning_only(source_file: Path, run_cli: Callable[
         "    for row in result.all():\n"
         "        consume(row)\n"
         "    expression = col(User.id).in_([item.id for item in items])\n"
-        "    usage = await Postgres(host).usage()\n"
+        "    usage = await Client(host).usage()\n"
         "    return {'success': True, 'data': users}\n"
     )
     result, stdout, _ = run_cli()

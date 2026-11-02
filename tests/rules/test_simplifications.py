@@ -18,7 +18,7 @@ def test_all_syntax_rule_families_are_included_without_rewriting() -> None:
                 self._client = client
             def fetch(self):
                 return self._client.fetch()
-        usage = Postgres(host).usage()
+        usage = Organizations(client).fetch()
         total = tuple([item.amount for item in items])
         rows = [Row(first=(value := item), second=value) for item in items]
         """)

@@ -67,6 +67,8 @@ class ParametrizationAnalyzer(BindingVisitor):
 
 def check_pytest(source: Source) -> list[Finding]:
     """Review parametrization with fresh per-file collection state."""
-    analyzer = ParametrizationAnalyzer(source)
+    analyzer = ParametrizationAnalyzer(
+        source,
+    )
     analyzer.visit(source.tree)
     return analyzer.findings
