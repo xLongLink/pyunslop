@@ -175,7 +175,7 @@ class QueryAnalyzer(BindingVisitor):
             and self.kind(node.func.value) in query_types.EXECUTE_RESULTS
         ):
             self.findings.append(Finding.at(node, "SLOP018", SCALAR_API_MESSAGE))
-        self.findings.extend(self.size_only_load(node, parent))
+        self.size_only_load(node, parent)
         self.generic_visit(node)
 
     def size_use(self, node: ast.AST, parent: ast.AST | None) -> bool:
@@ -186,10 +186,10 @@ class QueryAnalyzer(BindingVisitor):
             return parent.test is node
         return isinstance(parent, ast.UnaryOp) and isinstance(parent.op, ast.Not)
 
-    def size_only_load(self, node: ast.Call, parent: ast.AST | None) -> list[Finding]:
+    def size_only_load(self, node: ast.Call, parent: ast.AST | None) -> None:
         """Preserve rows rebound or consumed as data rather than only their size."""
         if self.kind(node) != "@rows" or parent is None:
-            return []
+            return
         candidate = self.size_use(node, parent)
         if isinstance(parent, ast.Assign) and len(parent.targets) == 1 and isinstance(parent.targets[0], ast.Name) and self.functions:
             name = parent.targets[0].id
@@ -206,12 +206,11 @@ class QueryAnalyzer(BindingVisitor):
 
         # Size-only use does not authorize changing locks or transaction semantics.
         if candidate:
-            return [
+            self.findings.append(
                 Finding.at(
                     node, "SLOP019", "review an existence or bounded query instead of loading rows solely for size/truth; preserve locking"
                 )
-            ]
-        return []
+            )
 
     def visit_Expr(self, node: ast.Expr) -> None:
         """Review adjacent same-session commit/refresh calls without rewriting."""

@@ -101,7 +101,7 @@ class EndpointAnalyzer(BindingVisitor):
 
             # Only route returns participate in response-policy checks.
             if endpoint.check_returns:
-                self.findings.extend(self.reconstructed_response(node, endpoint))
+                self.reconstructed_response(node, endpoint)
 
                 # Disabling a schema alone does not opt out of envelope checks.
                 if node.value is not None and return_kind == "@envelope":
@@ -110,26 +110,25 @@ class EndpointAnalyzer(BindingVisitor):
                     )
         self.generic_visit(node)
 
-    def reconstructed_response(self, node: ast.Return, endpoint: Endpoint) -> list[Finding]:
+    def reconstructed_response(self, node: ast.Return, endpoint: Endpoint) -> None:
         """Retain explicit validation options, computed inputs, and transformations."""
         value = node.value
         if not (isinstance(value, ast.Call) and isinstance(value.func, ast.Attribute) and value.func.attr == "model_validate"):
-            return []
+            return
         if len(value.args) != 1 or value.keywords or not isinstance(value.args[0], (ast.Name, ast.Attribute)):
-            return []
+            return
 
         # Imported model transformations cannot be proven absent by this local check.
         model = self.qualified(value.func.value)
         if model and model not in self.transforming_models and endpoint.response_models == {model}:
-            return [
+            self.findings.append(
                 # Validation may still intentionally transform the payload.
                 Finding.at(
                     value,
                     "SLOP015",
                     "route already validates this response model; avoid reconstruction unless validation intentionally transforms it",
                 )
-            ]
-        return []
+            )
 
 
 def analyze_endpoints(tree: ast.AST) -> list[Finding]:

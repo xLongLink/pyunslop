@@ -66,14 +66,38 @@ def test_request_fixture_is_preserved() -> None:
     assert codes(source) == []
 
 
-def test_collection_hook_is_preserved() -> None:
+@pytest.mark.parametrize(
+    "definition",
+    [
+        "def pytest_generate_tests(metafunc):",
+        "async def pytest_generate_tests(metafunc):",
+        "def pytest_collection_modifyitems(items):",
+        "async def pytest_collection_modifyitems(items):",
+    ],
+)
+def test_collection_hook_is_preserved(definition: str) -> None:
     """Preserve cases in modules whose collection hooks can depend on them."""
-    source = """
+    source = f"""
     import pytest
-    def pytest_collection_modifyitems(items):
+    @pytest.mark.parametrize("name", ["acme"])
+    def test_name(name):
+        assert name
+    {definition}
         pass
+    """
+    assert codes(source) == []
+
+
+@pytest.mark.parametrize("hook", ["pytest_generate_tests", "pytest_collection_modifyitems"])
+def test_nested_hook_does_not_exempt_module(hook: str) -> None:
+    """Only direct module-level hooks may exempt parametrized tests."""
+    source = f"""
+    import pytest
+    def helper():
+        def {hook}(items):
+            pass
     @pytest.mark.parametrize("name", ["acme"])
     def test_name(name):
         assert name
     """
-    assert codes(source) == []
+    assert codes(source) == ["SLOP013"]
