@@ -39,22 +39,17 @@ def single_literal_case(decorator: ast.expr, qualified: QualifiedName) -> bool:
 
 
 class ParametrizationAnalyzer(BindingVisitor):
-    """Keep collection-hook exemptions local to parametrization checks."""
+    """Resolve parametrization decorators and fixture exemptions."""
 
-    def __init__(self, source: Source) -> None:
-        """Collect module hooks before resolving test decorators."""
+    def __init__(self) -> None:
+        """Keep findings local to this traversal."""
         super().__init__()
         self.findings: list[Finding] = []
-        self.collection_hooks = any(
-            isinstance(item, (ast.FunctionDef, ast.AsyncFunctionDef))
-            and item.name in {"pytest_generate_tests", "pytest_collection_modifyitems"}
-            for item in source.tree.body
-        )
 
     def visit_FunctionDef(self, node: FunctionNode) -> None:
         """Review single-case parametrization without fixture or collection behavior."""
         args = [*node.args.posonlyargs, *node.args.args, *node.args.kwonlyargs]
-        if not self.collection_hooks and not any(argument.arg == "request" for argument in args):
+        if not any(argument.arg == "request" for argument in args):
             for decorator in node.decorator_list:
 
                 # Preserve decorators whose case carries fixture or collection semantics.
@@ -66,7 +61,15 @@ class ParametrizationAnalyzer(BindingVisitor):
 
 
 def check_pytest(source: Source) -> list[Finding]:
-    """Review parametrization with fresh per-file collection state."""
-    analyzer = ParametrizationAnalyzer(source)
+    """Review parametrization in modules without collection hooks."""
+    if any(
+        isinstance(item, (ast.FunctionDef, ast.AsyncFunctionDef))
+        and item.name in {"pytest_generate_tests", "pytest_collection_modifyitems"}
+        for item in source.tree.body
+    ):
+        return []
+
+    # Nonexempt modules still need position-sensitive decorator resolution.
+    analyzer = ParametrizationAnalyzer()
     analyzer.visit(source.tree)
     return analyzer.findings

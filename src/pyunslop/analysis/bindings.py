@@ -153,7 +153,7 @@ class BindingVisitor(ast.NodeVisitor):
         before, contracts_before = self.bindings.copy(), self.contracts.copy()
         for statement in node.body:
             self.visit(statement)
-        body, body_contracts = self.bindings.copy(), self.contracts.copy()
+        body, body_contracts = self.bindings, self.contracts
         self.bindings, self.contracts = before, contracts_before
 
         # Branch-local certainty must not become a false-positive after the merge.

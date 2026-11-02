@@ -85,6 +85,48 @@ def test_conditional_reassignment_does_not_leak_provenance() -> None:
     assert query_codes(source) == []
 
 
+def test_matching_branches_retain_provenance_and_contracts() -> None:
+    """Keep query provenance and sequence contracts shared by both outcomes."""
+    source = """
+    async def fetch(s: AsyncSession):
+        if condition:
+            result = await s.execute(stmt)
+            users: Sequence[User]
+        else:
+            result = await s.execute(other_stmt)
+            users: Sequence[User]
+        users = list(result.all())
+    """
+    assert query_codes(source) == ["SLOP006"]
+
+
+@pytest.mark.parametrize(
+    ("alternative", "contract", "expected"),
+    [
+        ("await s.execute(other_stmt)", "Sequence[User]", ["SLOP006"]),
+        ("unrelated()", "Sequence[User]", []),
+        ("await s.execute(other_stmt)", "list[User]", []),
+    ],
+)
+def test_nested_branches_merge_provenance_and_contracts(alternative: str, contract: str, expected: list[str]) -> None:
+    """Nested merges must retain only facts shared with the outer alternative."""
+    source = f"""
+    async def fetch(s: AsyncSession):
+        if outer:
+            if inner:
+                result = await s.execute(stmt)
+                users: Sequence[User]
+            else:
+                result = await s.execute(other_stmt)
+                users: Sequence[User]
+        else:
+            result = {alternative}
+            users: {contract}
+        users = list(result.all())
+    """
+    assert query_codes(source) == expected
+
+
 def test_loop_target_does_not_inherit_result_provenance() -> None:
     """Clear a previous result binding when it becomes a loop target."""
     source = """
