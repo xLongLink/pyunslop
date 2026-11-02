@@ -1,5 +1,5 @@
 import pytest
-from tests.support import RunCLI, native_codes
+from tests.support import CheckNative
 
 
 @pytest.mark.parametrize(
@@ -10,18 +10,17 @@ from tests.support import RunCLI, native_codes
         "return list(result.all())",
     ],
 )
-def test_reports_sequence_compatible_row_copies(run_cli: RunCLI, statement: str) -> None:
+def test_reports_sequence_compatible_row_copies(check_native: CheckNative, statement: str) -> None:
     """Review copies in local assignments and explicit sequence contracts."""
 
     # Arrange
     source = f"from collections.abc import Sequence\nfrom sqlalchemy.engine import Result\ndef consume(result: Result) -> Sequence[User]:\n    {statement}\n"
 
     # Act
-    result = run_cli(source)
+    findings = check_native(source)
 
     # Assert
-    assert result.returncode == 1
-    assert native_codes(result) == ["SLOP006"]
+    assert [finding.code for finding in findings] == ["SLOP006"]
 
 
 EXEMPTIONS = (
@@ -48,11 +47,11 @@ EXEMPTIONS = (
 
 
 @pytest.mark.parametrize("source", EXEMPTIONS)
-def test_preserves_intentional_or_unknown_list_consumers(run_cli: RunCLI, source: str) -> None:
+def test_preserves_intentional_or_unknown_list_consumers(check_native: CheckNative, source: str) -> None:
     """Keep copies when mutability or consumer requirements are not known."""
 
     # Act
-    result = run_cli(source)
+    findings = check_native(source)
 
     # Assert
-    assert native_codes(result) == []
+    assert findings == []

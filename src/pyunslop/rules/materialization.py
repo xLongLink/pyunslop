@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import ast
 from typing import TYPE_CHECKING
-from pyunslop.ast_utils import name_loads, statement_positions
+from pyunslop.ast_utils import name_loads, adjacent_statement
 from pyunslop.diagnostics import Finding
 
 if TYPE_CHECKING:
@@ -51,9 +51,9 @@ def check_assign(node: ast.Assign, context: BindingVisitor) -> list[Finding]:
     parent = context.parents[-2]
 
     # Only an immediately adjacent consumer in the same statement list is eligible.
-    for statements, index in statement_positions(parent, node):
-        if index + 1 < len(statements):
-            return temporary_iterable_pair(context.functions[-1], node, statements[index + 1], context.qualified)
+    following = adjacent_statement(parent, node, 1)
+    if following is not None:
+        return temporary_iterable_pair(context.functions[-1], node, following, context.qualified)
     return []
 
 

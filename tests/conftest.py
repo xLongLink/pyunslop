@@ -4,7 +4,29 @@ import pytest
 import textwrap
 import subprocess
 from pathlib import Path
-from tests.support import RunCLI
+from tests.support import RunCLI, CheckNative
+from pyunslop.checker import check_file
+from pyunslop.diagnostics import Diagnostic
+
+
+@pytest.fixture
+def check_native(tmp_path: Path) -> CheckNative:
+    """Check native diagnostics directly while preserving the source file."""
+    path = tmp_path / "example.py"
+
+    def check(source: str) -> list[Diagnostic]:
+        text = textwrap.dedent(source).lstrip("\n")
+        compile(text, str(path), "exec")
+        path.write_text(text, encoding="utf-8")
+
+        # Act
+        findings = check_file(path)
+
+        # Assert
+        assert path.read_text(encoding="utf-8") == text
+        return findings
+
+    return check
 
 
 @pytest.fixture

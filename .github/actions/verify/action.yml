@@ -1,0 +1,14 @@
+name: Verify
+description: Install test dependencies and run tests and lint checks
+runs:
+  using: composite
+  steps:
+    - name: Install dependencies
+      shell: bash
+      run: python -m pip install -e '.[test]'
+    - name: Run tests
+      shell: bash
+      run: python -m pytest -v
+    - name: Run lint and format checks
+      shell: bash
+      run: pyunslop

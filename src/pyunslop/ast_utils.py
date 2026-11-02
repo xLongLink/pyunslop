@@ -15,11 +15,16 @@ def immutable_literal(node: ast.AST) -> bool:
     return isinstance(node.operand, ast.Constant) and type(node.operand.value) in (int, float, complex)
 
 
-def statement_positions(parent: ast.AST, node: ast.stmt) -> Iterator[tuple[list[ast.stmt], int]]:
-    """Find a statement's index in each containing list field."""
+def adjacent_statement(parent: ast.AST, node: ast.stmt, offset: int) -> ast.stmt | None:
+    """Find a neighboring statement without crossing its containing list boundary."""
     for _, statements in ast.iter_fields(parent):
         if isinstance(statements, list) and node in statements:
-            yield statements, statements.index(node)
+            index = statements.index(node) + offset
+
+            # Negative offsets must not wrap to the end of a block.
+            if 0 <= index < len(statements):
+                return statements[index]
+    return None
 
 
 def name_loads(function: ast.AST, name: str) -> list[tuple[ast.Name, ast.AST]]:

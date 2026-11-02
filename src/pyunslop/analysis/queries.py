@@ -1,6 +1,6 @@
 import ast
 from pyunslop.analysis import query_types
-from pyunslop.ast_utils import name_loads, scope_nodes, statement_positions
+from pyunslop.ast_utils import name_loads, scope_nodes, adjacent_statement
 from pyunslop.contracts import LoopNode, FunctionNode
 from pyunslop.diagnostics import Finding
 from pyunslop.analysis.bindings import BindingVisitor
@@ -216,10 +216,10 @@ class QueryAnalyzer(BindingVisitor):
         refresh = called_method(node)
         if refresh and refresh.attr == "refresh" and self.kind(refresh.value) == "@session":
             # Only an immediately preceding same-session commit establishes this candidate.
-            for statements, index in statement_positions(self.parents[-2], node):
-                commit = called_method(statements[index - 1]) if index else None
-                if commit and commit.attr == "commit" and ast.dump(commit.value) == ast.dump(refresh.value):
-                    self.findings.append(Finding.at(node, "SLOP022", REFRESH_MESSAGE))
+            previous = adjacent_statement(self.parents[-2], node, -1)
+            commit = called_method(previous) if previous is not None else None
+            if commit and commit.attr == "commit" and ast.dump(commit.value) == ast.dump(refresh.value):
+                self.findings.append(Finding.at(node, "SLOP022", REFRESH_MESSAGE))
         self.generic_visit(node)
 
 

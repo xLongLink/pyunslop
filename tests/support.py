@@ -1,8 +1,10 @@
 import re
 from subprocess import CompletedProcess
 from collections.abc import Callable
+from pyunslop.diagnostics import Diagnostic
 
 RunCLI = Callable[..., CompletedProcess[str]]
+CheckNative = Callable[[str], list[Diagnostic]]
 
 
 def native_codes(result: CompletedProcess[str]) -> list[str]:
