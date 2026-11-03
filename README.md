@@ -40,7 +40,7 @@ DO run `uvx pyunslop` and fix any warnings
 | [SLOP006](docs/SLOP006.md) | Avoid redundant `list(result.all())` copies when a sequence is sufficient. |
 | [SLOP007](docs/SLOP007.md) | Iterate buffered query results directly instead of iterating `result.all()`. |
 | [SLOP008](docs/SLOP008.md) | Pass generators rather than single-use list comprehensions to SQLAlchemy `.in_()`. |
-| [SLOP009](docs/SLOP009.md) | Name allowlisted domain-class instances before calling their methods. |
+| [SLOP009](docs/SLOP009.md) | Assign known class instances before calling methods; use multiline construction with arguments. |
 | [SLOP010](docs/SLOP010.md) | Declare FastAPI JSON endpoint response schemas explicitly. |
 | [SLOP011](docs/SLOP011.md) | Return API payloads directly instead of generic success envelopes. |
 | [SLOP012](docs/SLOP012.md) | Reject leading module docstrings (CLI help and Alembic revision headers exempt). |

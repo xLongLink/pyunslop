@@ -65,6 +65,8 @@ class ModelAnalyzer(BindingVisitor):
 
 def check_pydantic(source: Source) -> list[Finding]:
     """Review field order without inferring custom model inheritance."""
-    analyzer = ModelAnalyzer(source)
+    analyzer = ModelAnalyzer(
+        source,
+    )
     analyzer.visit(source.tree)
     return analyzer.findings
